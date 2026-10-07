@@ -43,6 +43,13 @@ class ready_to_deliver_view(APIView):
         if not product:
             return Response({"status": False, "message": "product is not ready yet"})
         serilizer = ready_to_deliver_serializer(product, data=req.data, partial=True)
-        return Response({"status": True, "message": "success", "data": serilizer.data})
+        if serilizer.is_valid():
+            serilizer.save()
+            return Response({"status": True, "message": "success", "data": serilizer.data})
+        return Response({
+            'status':False,
+            'error':serilizer.errors
+        },status=400)
+        
 
 

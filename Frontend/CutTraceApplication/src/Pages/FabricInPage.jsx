@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import FabricInTable from "../components/FabricInTable";
+import FabricInTable from "../Tables/FabricInTable";
 import FabricInFormModal from '../Models/FabricInFormModal'
 import DeleteConfirmModal from "../Models/DeleteConfirmModal";
 import Navbar from "../components/Navbar";
@@ -96,20 +96,24 @@ export default function FabricInPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 bg-[#EEF1FB] shadow-2xl mx-4 my-6 sm:mx-12 sm:my-10 lg:mx-25 lg:my-15 rounded-2xl flex-1 w-full min-h-screen">
+    // FIX: w-full hataya (margin ke saath overflow karta tha), min-w-0 + overflow-x-hidden add kiya
+    <div className="p-4 sm:p-6 bg-[#EEF1FB] shadow-2xl mx-3 my-4 sm:mx-12 sm:my-10 lg:mx-25 lg:my-15 rounded-2xl flex-1 min-w-0 min-h-screen overflow-x-hidden">
       <Navbar />
 
-      <div className="flex items-center justify-between mb-5 mt-6">
-        <h2 className="text-xl font-semibold text-slate-800">Fabric In</h2>
+      {/* FIX: gap, smaller title on mobile, button text hidden on mobile */}
+      <div className="flex items-center justify-between gap-2 mb-5 mt-6">
+        <h2 className="text-lg sm:text-xl font-semibold text-slate-800 truncate">Fabric In</h2>
         <button
           onClick={openAddForm}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600"
+          className="flex shrink-0 items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600"
         >
-          <Plus size={16} /> Add Fabric
+          <Plus size={16} />
+          <span className="hidden sm:inline">Add Fabric</span>
         </button>
       </div>
 
-      <div className="relative mb-4 max-w-xs">
+      {/* FIX: mobile pe full width, bari screen pe max-w-xs */}
+      <div className="relative mb-4 w-full sm:max-w-xs">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
           type="text"
@@ -125,7 +129,8 @@ export default function FabricInPage() {
 
       <FabricInTable rows={paginated} onEdit={openEditForm} onDelete={openDeleteConfirm} />
 
-      <div className="flex items-center justify-between mt-4">
+      {/* FIX: flex-wrap + gap taake chhoti screen pe na kate */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
         <p className="text-xs text-slate-400">
           Showing {paginated.length} of {filtered.length} entries
         </p>

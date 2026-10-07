@@ -78,7 +78,7 @@ export default function ProductionStatsPanel() {
   return (
     <div className=" rounded-2xl shadow-2xl bg-[#F4F5F7] p-5 [background-image:radial-gradient(#d1d5db_1px,transparent_1px)] [background-size:20px_20px] border border-slate-100 p-5 w-full h-full flex flex-col">
       {/* Header with tab switcher (mirrors the icon-toggle position on Production Pipeline card) */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between gap-3 mb-5">
         <h3 className="text-xl font-semibold text-gray-600 tracking-wider ">Production Stats</h3>
         <div className="flex bg-slate-100 rounded-lg p-1">
           {TABS.map((tab) => (
@@ -97,7 +97,7 @@ export default function ProductionStatsPanel() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto over">
         {activeTab === "suspicious" && <SuspiciousView data={data.suspicious} />}
         {activeTab === "delivered" && <DeliveredView data={data.delivered} />}
         {activeTab === "production" && <ProductionView data={data.production} />}

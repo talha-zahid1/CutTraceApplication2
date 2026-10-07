@@ -1,6 +1,6 @@
-import ProductionOverview from "../components/ProductionOverview";
+import ProductionOverview from "../Cards/ProductionOverview";
 import Navbar from "../components/Navbar";
-import ProductionAnalytics from "../components/ProductionAnalytics";
+import ProductionAnalytics from "../Cards/ProductionAnalytics";
 import Sidebar from "../components/Sidebar";
 import InspectionRecords from "../components/InspectionRecords";
 

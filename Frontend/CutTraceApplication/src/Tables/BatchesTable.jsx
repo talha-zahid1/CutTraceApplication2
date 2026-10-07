@@ -2,15 +2,15 @@ import {Trash2,Pencil , Layers } from "lucide-react";
 const STAGE_STYLES = {
   "Fabric In": "bg-blue-50 text-blue-600",
   "Ready to Manufacture": "bg-purple-50 text-purple-600",
-  Manufactured: "bg-amber-50 text-amber-600",
-  Testing: "bg-indigo-50 text-indigo-600",
+  "Manufactured": "bg-amber-50 text-amber-600",
+  "Testing": "bg-indigo-50 text-indigo-600",
   "Ready to Deliver": "bg-green-50 text-green-600",
-  Delivered: "bg-red-50 text-red-600",
+  "Delivered": "bg-red-50 text-red-600",
 };
 const STATUS_STYLES = {
   "In Progress": "bg-amber-50 text-amber-600",
-  Pending: "bg-slate-100 text-slate-600",
-  Completed: "bg-emerald-50 text-emerald-600",
+  "Pending": "bg-slate-100 text-slate-600",
+  "Completed": "bg-emerald-50 text-emerald-600",
 };
 
 function statusStyle(status) {
@@ -50,7 +50,7 @@ const BatchesTable = ({ rows, onedit,onDelete }) => {
               {`From Fabric In #${row.fabric_in_id}`}
             </p>
           </div>
-          <div className="hidden sm:flex flex-col items-end shrink-0 w-24 bg-bla">
+          <div className="hidden sm:flex flex-col items-end shrink-0 w-24">
             <span
               className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${statusStyle(row.current_status)}`}
             >

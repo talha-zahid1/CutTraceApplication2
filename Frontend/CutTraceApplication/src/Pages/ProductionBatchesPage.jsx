@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
-import {Search,Plus} from 'lucide-react'
+import {Search,Plus,ChevronLeft,ChevronRight} from 'lucide-react'
 import Navbar from "../components/Navbar"
 import BatchesFormModal from "../Models/BatchesFormModal"
-import BatchesTable from "../components/BatchesTable"
+import DeleteConfirmModal from "../Models/DeleteConfirmModal"
+import BatchesTable from "../Tables/BatchesTable"
 
 const dummyData = [
   { batch_id: 1, fabric_in_id: 1, current_stage: "Manufactured", current_status: "In Progress", created_at: "2024-12-01", updated_at: "2024-12-03" },
@@ -12,14 +13,31 @@ const dummyData = [
   { batch_id: 5, fabric_in_id: 5, current_stage: "Delivered", current_status: "Completed", created_at: "2024-12-05", updated_at: "2024-12-07" },
 ];
 const PAGE_SIZE = 5;
+
 const ProductionBatchesPage = () => {
     const [OpenAddbutton, setOpenAddbutton] = useState(false)
     const [data, setdata] = useState(dummyData)
     const [search, setsearch] = useState('')
     const [page, setPage] = useState(1);
     const [editingrow, seteditingrow] = useState(null)
-    const [filtered, setfiltered] = useState("")
+    const [filtered, setfiltered] = useState(dummyData)
+
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+    const [deletingrow, setdeletingrow] = useState(null)
+
+    useEffect(() => {
+        // TODO: API CALL HERE
+        // fetch("/api/production/batches/", {
+        //   headers: { Authorization: `Bearer ${token}` },
+        // })
+        //   .then((res) => res.json())
+        //   .then((res) => {
+        //     if (res.status) setdata(res.data);
+        //   });
+    }, [])
+
     const enableaddbutton=()=>{
+        seteditingrow(null)
         setOpenAddbutton(true)
     }
 
@@ -27,32 +45,61 @@ const ProductionBatchesPage = () => {
         seteditingrow(row)
         setOpenAddbutton(true)
     }
-    const savehandler=(row)=>{
-    if (editingrow){
-        setdata()
-    }
+
+    const savehandler=(formData)=>{
+        if (editingrow){
+            setdata((prev) =>
+                prev.map((r) => (r.batch_id === editingrow.batch_id ? { ...r, ...formData } : r))
+            );
+        } else {
+            const newRow = {
+                ...formData,
+                batch_id: Math.max(0, ...data.map((r) => r.batch_id)) + 1,
+                created_at: new Date().toISOString().slice(0, 10),
+                updated_at: null,
+            };
+            setdata((prev) => [newRow, ...prev]);
+        }
+        setOpenAddbutton(false)
+        seteditingrow(null)
     }
 
+    const openDeleteConfirm=(row)=>{
+        setdeletingrow(row)
+        setIsDeleteOpen(true)
+    }
 
+    const handleDeleteConfirm=()=>{
+        // TODO: API CALL HERE
+        // fetch(`/api/production/batches/${deletingrow.batch_id}/`, {
+        //   method: "DELETE",
+        //   headers: { Authorization: `Bearer ${token}` },
+        // }).then(() => { ...remove from state... });
+
+        setdata((prev) => prev.filter((r) => r.batch_id !== deletingrow.batch_id))
+        setIsDeleteOpen(false)
+        setdeletingrow(null)
+    }
 
     useEffect(() => {
         if (!search){
             setfiltered(data)
         }else{
             const q = search.toLowerCase();
-            const resp= data.filter(
-      (row) =>
-        row.supplier_name.toLowerCase().includes(q) ||
-        row.receiver_name.toLowerCase().includes(q) ||
-        row.fabric_quality.toLowerCase().includes(q) ||
-        row.color.toLowerCase().includes(q)
-    );
-    setfiltered(resp)
+            const resp = data.filter(
+                (row) =>
+                    row.current_stage.toLowerCase().includes(q) ||
+                    row.current_status.toLowerCase().includes(q) ||
+                    row.batch_id.toString().includes(q) ||
+                    row.fabric_in_id.toString().includes(q)
+            );
+            setfiltered(resp)
         }
     }, [data,search])
     // filtered is data after search
-    const Paginated=filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const Paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className='p-4 sm:p-6 bg-[#EEF1FB] shadow-2xl mx-4 my-6 sm:mx-12 sm:my-10 lg:mx-25 lg:my-15 rounded-2xl flex-1 w-full min-h-screen'>
@@ -78,12 +125,46 @@ const ProductionBatchesPage = () => {
              />
         </div>
 
+        <BatchesTable rows={Paginated} onedit={openEditFrom} onDelete={openDeleteConfirm} />
+
+        <div className="flex items-center justify-between mt-4">
+            <p className="text-xs text-slate-400">
+                Showing {Paginated.length} of {filtered.length} entries
+            </p>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="p-1.5 rounded-md border border-slate-200 text-slate-500 disabled:opacity-40"
+                >
+                    <ChevronLeft size={16} />
+                </button>
+                <span className="text-xs text-slate-500">
+                    Page {page} of {totalPages}
+                </span>
+                <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="p-1.5 rounded-md border border-slate-200 text-slate-500 disabled:opacity-40"
+                >
+                    <ChevronRight size={16} />
+                </button>
+            </div>
+        </div>
+
         <BatchesFormModal
         isopen={OpenAddbutton}
         onclose={()=>setOpenAddbutton(false)}
         initialdata={editingrow}
+        onsave={savehandler}
          />
-         <BatchesTable rows={Paginated} onedit={openEditFrom}/>
+
+        <DeleteConfirmModal
+        open={isDeleteOpen}
+        itemLabel={deletingrow ? `Batch #${deletingrow.batch_id}` : ""}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setIsDeleteOpen(false)}
+        />
 
     </div>
   )

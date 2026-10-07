@@ -49,17 +49,19 @@ export default function FabricInFormModal({ open, initialData, onClose, onSave }
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
+    <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-3 sm:p-4">
+      {/* FIX: max-h-[90dvh] (mobile browser bar ke liye) */}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90dvh] overflow-y-auto">
+        {/* FIX: mobile pe kam padding, header sticky */}
+        <div className="sticky top-0 bg-white z-10 flex items-center gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100">
           <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
             <Layers size={18} className="text-blue-500" />
           </div>
-          <div className="flex-1">
-            <h3 className="text-slate-800 font-semibold text-base">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-slate-800 font-semibold text-base truncate">
               {isEdit ? "Edit Fabric Entry" : "Add Fabric Entry"}
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 truncate">
               {isEdit ? "Update the details below" : "Fill in the fabric intake details"}
             </p>
           </div>
@@ -68,10 +70,11 @@ export default function FabricInFormModal({ open, initialData, onClose, onSave }
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-6">
+        <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-5 space-y-6">
           {/* Parties */}
           <Section icon={User} label="Parties">
-            <div className="grid grid-cols-2 gap-3">
+            {/* FIX: mobile pe 1 column, sm se 2 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Supplier Name">
                 <input
                   type="text"
@@ -95,7 +98,8 @@ export default function FabricInFormModal({ open, initialData, onClose, onSave }
 
           {/* Fabric details */}
           <Section icon={Palette} label="Fabric Details">
-            <div className="grid grid-cols-3 gap-3">
+            {/* FIX: mobile pe 1 column, sm se 3 */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Field label="Quantity (kg)">
                 <input
                   type="number"
@@ -130,6 +134,7 @@ export default function FabricInFormModal({ open, initialData, onClose, onSave }
 
           {/* Cost */}
           <Section icon={Wallet} label="Cost">
+            {/* Yeh 2 column hi rehne diya (number fields chhote hain) */}
             <div className="grid grid-cols-2 gap-3">
               <Field label="Price / kg">
                 <input
@@ -164,7 +169,8 @@ export default function FabricInFormModal({ open, initialData, onClose, onSave }
             />
           </Section>
 
-          <div className="flex justify-end gap-2 pt-1">
+          {/* FIX: mobile pe buttons full width */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
             <button
               type="button"
               onClick={onClose}
@@ -174,7 +180,7 @@ export default function FabricInFormModal({ open, initialData, onClose, onSave }
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 shadow-sm shadow-blue-200"
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 shadow-sm shadow-blue-200"
             >
               <Truck size={15} />
               {isEdit ? "Save Changes" : "Add Fabric"}
@@ -183,17 +189,19 @@ export default function FabricInFormModal({ open, initialData, onClose, onSave }
         </form>
       </div>
 
-      {/* Tailwind can't target a custom ".input" class without config,
-          so it's defined inline here via a <style> tag for this modal only. */}
       <style>{`
         .input {
           width: 100%;
+          min-width: 0;
           border: 1px solid #e2e8f0;
           border-radius: 0.5rem;
           padding: 0.55rem 0.75rem;
-          font-size: 0.875rem;
+          font-size: 16px; /* FIX: iPhone pe input focus par zoom nahi hoga */
           color: #334155;
           background: #f8fafc;
+        }
+        @media (min-width: 640px) {
+          .input { font-size: 0.875rem; }
         }
         .input:focus {
           outline: none;
@@ -220,7 +228,7 @@ function Section({ icon: Icon, label, children }) {
 
 function Field({ label, children }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
       {children}
     </div>

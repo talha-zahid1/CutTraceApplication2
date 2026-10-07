@@ -47,11 +47,11 @@ class delivered_view(APIView):
                 )
             if product.status.lower()=='ready':
                 data={
-                    'batch_id':product.batch_id,
+                    'batch_id': product.batch_id_id,
                     'quantity':product.quantity,
                     'ready_to_deliver_id':product.ready_to_deliver_id,
                     'final_product_name':product.final_product_name,
-                    'fabric_quality':product.fabric_quality,
+                    'fabric_quality': product.fabric_quality_id,
                     'delivery_boy_name':req.data.get('delivery_boy_name'),
                     'purchaser_name':req.data.get('purchaser_name'),
                     'total_sale_price':req.data.get('total_sale_price'),

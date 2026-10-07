@@ -31,10 +31,10 @@ class suspicious_batches_stats_view(APIView):
                     investigation_status="rejected"
                 ).aggregate(rejected=Count("suspicious_id"))
                 products_by_quality = suspicious_products.objects.values(
-                    "fabric_quality__quality_name"
+                    "fabric_quality__name"
                 ).annotate(total=Count("batch_id", distinct=True))
                 products_by_fp_name = suspicious_products.objects.values(
-                    "ready_to_manufacture_id__final_product_name"
+                    "manufactured_id__final_product_name"
                 ).annotate(total=Count("batch_id", distinct=True))
                 total_mismatched_products = suspicious_products.objects.aggregate(
                     total=Count("suspicious_id")

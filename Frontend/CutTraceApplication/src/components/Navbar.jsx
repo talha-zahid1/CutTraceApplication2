@@ -25,10 +25,10 @@ const Navbar = () => {
           <span className="text-xs font-semibold text-gray-500">First Item</span>
           <span className="text-sm font-semibold text-gray-700">First Batch Date</span>
         </div>
-        <div className="h-8 w-24 lg:w-32 flex flex-col shrink-0">
+        {/* <div className="h-8 w-24 lg:w-32 flex flex-col shrink-0">
           <span className="text-xs font-semibold text-gray-500">Last Item</span>
           <span className="text-sm font-semibold text-gray-700">Last batch Date</span>
-        </div>
+        </div> */}
       </div>
 
       <div className="flex gap-3 sm:gap-4 sm:p-4 order-3 ml-auto sm:ml-0">

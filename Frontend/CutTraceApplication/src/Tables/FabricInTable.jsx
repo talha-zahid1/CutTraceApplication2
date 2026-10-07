@@ -25,9 +25,11 @@ export default function FabricInTable({ rows, onEdit, onDelete }) {
       {rows.map((row) => (
         <div
           key={row.fabric_in_id}
-          className="flex items-center gap-4 rounded-xl border border-slate-100 bg-white p-4 hover:shadow-sm hover:border-slate-200 transition-shadow"
+          // FIX: mobile pe kam gap aur padding
+          className="flex items-center gap-3 sm:gap-4 rounded-xl border border-slate-100 bg-white p-3 sm:p-4 hover:shadow-sm hover:border-slate-200 transition-shadow"
         >
-          <div className="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+          {/* FIX: mobile pe chhota icon */}
+          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
             <Layers size={18} className="text-blue-500" />
           </div>
 
@@ -38,8 +40,12 @@ export default function FabricInTable({ rows, onEdit, onDelete }) {
                 {row.fabric_quality}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-400 mt-0.5 truncate">
               To {row.receiver_name} &bull; {row.color} &bull; #{row.fabric_in_id}
+            </p>
+            {/* FIX: mobile pe quantity aur cost yahan dikhta hai (sm se upar chhup jata hai) */}
+            <p className="text-xs text-slate-500 mt-0.5 sm:hidden">
+              {row.quantity_kg} kg &bull; Rs {Number(row.total_cost).toLocaleString()}
             </p>
           </div>
 

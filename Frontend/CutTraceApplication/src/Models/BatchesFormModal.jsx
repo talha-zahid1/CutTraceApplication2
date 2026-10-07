@@ -5,17 +5,15 @@ const emptyForm = {
   "fabric_in_id": "",
   "current_stage": "",
   "current_status": "",
-  
 };
 
-const BatchesFormModal = ({isopen,onclose,initialdata}) => {
+const BatchesFormModal = ({isopen,onclose,initialdata,onsave}) => {
   const [form, setform] = useState(emptyForm)
-  console.log(initialdata)
   const isedit=Boolean(initialdata)
+
   useEffect(() => {
     setform(initialdata?{...emptyForm,...initialdata}:emptyForm)
   }, [initialdata])
-  
 
   const handlechange=(field,value)=>{
     setform((prev)=>({...prev,[field]:value}))
@@ -23,7 +21,23 @@ const BatchesFormModal = ({isopen,onclose,initialdata}) => {
 
   const submithandler=(e)=>{
     e.preventDefault();
-    
+
+    // TODO: API CALL HERE
+    // if (isedit) {
+    //   fetch(`/api/production/batches/${initialdata.batch_id}/`, {
+    //     method: "PUT",
+    //     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    //     body: JSON.stringify(form),
+    //   }).then((res) => res.json()).then((res) => { if (res.status) onsave(form); });
+    // } else {
+    //   fetch("/api/production/batches/", {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    //     body: JSON.stringify(form),
+    //   }).then((res) => res.json()).then((res) => { if (res.status) onsave(form); });
+    // }
+
+    onsave(form);
   }
 
   if (!isopen) return null;
@@ -37,7 +51,6 @@ const BatchesFormModal = ({isopen,onclose,initialdata}) => {
         <div className='flex-1'>
           <h3 className="text-slate-800 font-semibold text-base">
             {isedit ? "Edit Batch Entry":"Add Batches Entry"}
-
           </h3>
         <p  className="text-xs text-slate-400">
           {isedit ? "Update the details below":"Fill in the production batch details"}
@@ -47,10 +60,9 @@ const BatchesFormModal = ({isopen,onclose,initialdata}) => {
           <X size={18} />
         </button>
         </div>
-      <form action="" onSubmit={submithandler} className="px-6 py-5 space-y-6">
-        
+      <form onSubmit={submithandler} className="px-6 py-5 space-y-6">
+
         <Section icon={Layers} label="Batch Details">
-          
           <div className='grid grid-cols-2 gap-5'>
             <Field label="Fabric In ID" >
             <input type="text"
@@ -79,7 +91,12 @@ const BatchesFormModal = ({isopen,onclose,initialdata}) => {
           </div>
         </Section>
         <div className='flex justify-end gap-2'>
-          <button className='px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50'
+          {/* type="button" is important here — this button is inside a
+              <form>, so without it, clicking Cancel would ALSO trigger
+              the form's submit (browser default button type is "submit"). */}
+          <button
+          type="button"
+          className='px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50'
           onClick={onclose}
           >Cancel</button>
 
@@ -100,7 +117,6 @@ const BatchesFormModal = ({isopen,onclose,initialdata}) => {
           font-size: 0.875rem;
           color: #334155;
           background: #f8fafc;
-          
         }
           .input:focus {
           outline: none;

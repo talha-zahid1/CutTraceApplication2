@@ -14,7 +14,7 @@ class Manufactured_view(APIView):
             return [IsAdmin()]
     def get(self,req,manufactured_id=None):
         if not manufactured_id:
-            products=manufactured_products.objects.get()
+            products=manufactured_products.objects.all()
             if not products:
                 return Response({
                     'status':True,
@@ -75,6 +75,10 @@ class Manufactured_view(APIView):
                     'status':True,
                     'message':'Product Updated'
                 })
+            return Response({
+                'status':False,
+                'error':serializer.errors
+            },status=400)
             
     def delete(self,req,manufactured_id):
         product=manufactured_products.objects.filter(manufactured_id=manufactured_id).first()
