@@ -2,48 +2,120 @@ import { useState } from "react";
 import logotransparent from "../assets/logotransparent.png"
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../services/auth";
+import { AlertCircle, Loader2 } from "lucide-react";
 
-const emptyform={
-  username:"",
-  email:"",
-  phone_no:"",
-  password:"",
+const emptyform = {
+  username: "",
+  email: "",
+  mobile_no: "",
+  password: "",
 }
+
+// Saare required fields filled hain ya nahi check karta hai.
+const isempty = (form) => {
+  return Object.values(form).some((value) => !value || !value.trim());
+};
+
+const getErrorMessage = (err, fallback) => {
+  const body = err.response?.data;
+
+  if (typeof body?.message === "string") return body.message;
+  if (typeof body?.detail === "string") return body.detail;
+  if (typeof body?.error === "string") return body.error;
+
+  // Backend validation errors (e.g. { email: ["already exists"] })
+  if (body && typeof body === "object") {
+    const fieldErrors = Object.entries(body)
+      .map(([field, value]) => {
+        const message = Array.isArray(value)
+          ? value
+              .map((item) => (typeof item === "string" ? item : JSON.stringify(item)))
+              .join(", ")
+          : typeof value === "string"
+            ? value
+            : "";
+
+        return message ? `${field}: ${message}` : "";
+      })
+      .filter(Boolean);
+
+    if (fieldErrors.length) {
+      return fieldErrors.join(" | ");
+    }
+  }
+
+  if (err.message === "Network Error" || !err.response) {
+    if (err.code === "ECONNABORTED") {
+      return "The request timed out. Please try again.";
+    }
+    if (err.message === "Network Error") {
+      return "Unable to Signup. Please check your connection.";
+    }
+  }
+
+  return err.message || fallback;
+};
+
 export default function Signup() {
   const [form, setform] = useState(emptyform)
   const [confirmpassword, setconfirmpassword] = useState('')
   const [error, seterror] = useState('')
-  const navigate=useNavigate()
-const handle_change=(e)=>{
-  const {name,value}=e.target
-  setform((prev) => ({
+  const [loading, setloading] = useState(false)
+  const navigate = useNavigate()
+
+  const handle_change = (e) => {
+    const { name, value } = e.target
+    setform((prev) => ({
       ...prev,
       [name]: value,
     }));
-}
-const handlesubmit=async(e)=>{
-  e.preventDefault()
-  try {
-    if (isempty(form)) {
-      throw new Error(
-        'Please Fill Out the empty field'
-      )
-    }
-    if (form.password!=confirmpassword) {
-      throw new Error("The passwords you entered don't match. Please re-enter them.")
-    }
-    const resp=await api.post('register/',form)
-    if (resp?.data?.status) {
-      navigate('/dashboard')
-    }
-  } catch (error) {
-    seterror(
-      error.resp?.data?.message||error.resp?.data?.error||error.resp?.data?.detail||error.message
-    )
+    if (error) seterror("");
   }
-  
 
-}
+  const handlesubmit = async (e) => {
+    e.preventDefault()
+    if (loading) return;
+
+    seterror("");
+
+    try {
+      if (isempty(form)) {
+        throw new Error("Please fill out the empty fields.");
+      }
+      
+      if (form.password !== confirmpassword) {
+        throw new Error("The passwords you entered don't match. Please re-enter them.");
+      }
+
+      setloading(true);
+      console.log('form',form)
+      const resp = await api.post('register/', form)
+      console.log('response',resp?.data?.data)
+      if (resp?.data?.status === false) {
+        throw new Error(
+          getErrorMessage({ response: { data: resp.data } }, "Couldn't create your account.")
+        );
+      }
+
+      if (resp?.data?.status) {
+        const loginResp = await api.post('api/token/', {
+          username: form.email,
+          password: form.password,
+        });
+ 
+        setapiaccesstoken(loginResp.data.access);
+        localStorage.setItem("access_token", loginResp.data.access);
+        localStorage.setItem("refresh_token", loginResp.data.refresh);
+        navigate('/dashboard')
+      }
+    } catch (err) {
+      console.error("Signup failed:", err.response?.data || err.message);
+      seterror(getErrorMessage(err, "Couldn't create your account."));
+    } finally {
+      setloading(false);
+    }
+  }
+
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#e3ebfc] via-[#eef1fb] to-[#c9daf8] p-4">
       {/* Background shapes */}
@@ -60,114 +132,106 @@ const handlesubmit=async(e)=>{
 
         <h1 className="mt-4 text-center text-3xl font-bold text-slate-900">Sign up</h1>
 
-        {/* TODO: error message yahan */}
-
-        {/* TODO: form ka onSubmit yahan */}
         <form className="mt-6 space-y-4"
-        onSubmit={handlesubmit}
+          onSubmit={handlesubmit}
         >
-          {error && <div className="flex min-h-64 flex-col items-center justify-center gap-3 px-4 text-center">
-          <AlertCircle size={28} className="text-red-500" />
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700"
+            >
+              <AlertCircle size={18} className="mt-0.5 shrink-0" />
+              <p className="break-words">{error}</p>
+            </div>
+          )}
 
-          <p className="text-sm font-medium text-red-500">
-            Unable to load or process fabric entries
-          </p>
-
-          <p className="max-w-lg break-words text-sm text-slate-500">
-            {error}
-          </p>
-
-          <button
-            type="button"
-            onClick={fetchData}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          >
-            <RefreshCw size={15} />
-            Try again
-          </button>
-        </div>}
           <div>
             <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-slate-700">Full name</label>
-            {/* TODO: value + onChange */}
             <input
               id="name"
-              name="name"
+              name="username"
               type="text"
               value={form.username}
+              disabled={loading}
               placeholder="Your full name"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
               onChange={handle_change}
             />
           </div>
 
           <div>
             <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
-            
+
             <input
               id="email"
               name="email"
               type="email"
               value={form.email}
               onChange={handle_change}
+              disabled={loading}
               placeholder="you@company.com"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
           <div>
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">Contact No</label>
-            
+            <label htmlFor="phone" className="mb-1.5 block text-sm font-medium text-slate-700">Contact No</label>
+
             <input
               id="phone"
-              name="phone_no"
+              name="mobile_no"
               type="tel"
-              value={form.phone_no}
+              value={form.mobile_no}
               onChange={handle_change}
+              disabled={loading}
               placeholder="03XX XXXXXXX"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
           <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
-            
+
             <input
               id="password"
               name="password"
               type="password"
               value={form.password}
               onChange={handle_change}
+              disabled={loading}
               placeholder="Password"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
           <div>
             <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-slate-700">Confirm password</label>
-            {/* TODO: value + onChange */}
             <input
               id="confirmPassword"
               name="confirmPassword"
               type="password"
               value={confirmpassword}
-              onChange={(e)=>{
+              onChange={(e) => {
                 setconfirmpassword(e.target.value)
+                if (error) seterror("");
               }}
+              disabled={loading}
               placeholder="Confirm password"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
-          {/* TODO: loading state par disabled */}
           <button
             type="submit"
-            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700"
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Create account
+            {loading && <Loader2 size={16} className="animate-spin" />}
+            {loading ? "Creating account..." : "Create account"}
           </button>
         </form>
         <p className="mt-6 text-center text-xs text-slate-500">
           Already have an account?{" "}
           <Link to='/' className="font-bold text-slate-900 hover:text-blue-700">
-          Sign in
+            Sign in
           </Link>
         </p>
       </div>

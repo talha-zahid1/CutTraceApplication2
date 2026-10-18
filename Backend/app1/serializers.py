@@ -144,6 +144,9 @@ class user_serializer(serializers.Serializer):
     password=serializers.CharField(write_only=True)
     email=serializers.EmailField()
 class profile_serializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='user.username', required=False, allow_blank=False)
+    email = serializers.EmailField(source='user.email', required=False)
+    phone = serializers.CharField(source='mobile_no', required=False, allow_blank=True)
     def validate_role(self, value):
         request = self.context.get('request')
         user = request.user
@@ -154,5 +157,15 @@ class profile_serializer(serializers.ModelSerializer):
         return value
     class Meta:
         model=UserProfile
-        fields = ['user', 'mobile_no', 'role']
-        
+        fields = ['user', 'mobile_no', 'role', 'full_name', 'email', 'phone']
+        read_only_fields = ['user', 'mobile_no']
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', None)
+        if user_data:
+            user = instance.user
+            if 'username' in user_data:
+                user.username = user_data['username']
+            if 'email' in user_data:
+                user.email = user_data['email']
+            user.save()
+        return super().update(instance, validated_data)

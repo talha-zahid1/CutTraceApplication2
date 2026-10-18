@@ -1,9 +1,91 @@
 import logotransparent from '../assets/logotransparent.png'
-import {Link} from 'react-router-dom'
-import Signup from './Signup';
+import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react';
+import { api,setapiaccesstoken } from '../services/auth';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
+const getErrorMessage = (err, fallback) => {
+  const body = err.response?.data;
+
+  if (typeof body?.message === "string") return body.message;
+  if (typeof body?.detail === "string") return body.detail;
+  if (typeof body?.error === "string") return body.error;
+
+  if (body && typeof body === "object") {
+    const fieldErrors = Object.entries(body)
+      .map(([field, value]) => {
+        const message = Array.isArray(value)
+          ? value
+              .map((item) => (typeof item === "string" ? item : JSON.stringify(item)))
+              .join(", ")
+          : typeof value === "string"
+            ? value
+            : "";
+
+        return message ? `${field}: ${message}` : "";
+      })
+      .filter(Boolean);
+
+    if (fieldErrors.length) {
+      return fieldErrors.join(" | ");
+    }
+  }
+
+  if (err.message === "Network Error" || !err.response) {
+    if (err.code === "ECONNABORTED") {
+      return "The request timed out. Please try again.";
+    }
+    if (err.message === "Network Error") {
+      return "Unable to connect to the server. Please check your connection.";
+    }
+  }
+
+  return err.message || fallback;
+};
 
 export default function Login() {
+  const [error, seterror] = useState("")
+  const [password, setpassword] = useState("")
+  const [username, setusername] = useState("")
+  const [loading, setloading] = useState(false)
+
+  const navigate = useNavigate()
+
+  const submithandler = async (e) => {
+    e.preventDefault();
+
+    if (!password && !username ){
+      seterror("Please Fill Out the Empty Fields.");
+      return;
+    }else if (!username ) {
+      seterror("Please enter Username.");
+      return;
+    }else if ( !password) {
+      seterror("Please enter password.");
+      return;
+    }
+
+    if (loading) return;
+
+    seterror("");
+    setloading(true);
+
+    try {
+      
+      const resp = await api.post('api/token/', { username, password })
+      setapiaccesstoken(resp.data.access);
+      localStorage.setItem("access_token", resp.data.access);
+      localStorage.setItem("refresh_token", resp.data.refresh);
+
+      navigate('/dashboard')
+    } catch (err) {
+      console.error("Login failed:", err.response?.data || err.message);
+      seterror(getErrorMessage(err, "Login failed. Please check your credentials."));
+    } finally {
+      setloading(false);
+    }
+  }
+
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#e3ebfc] via-[#eef1fb] to-[#c9daf8] p-4">
       {/* Background shapes */}
@@ -21,47 +103,67 @@ export default function Login() {
         <h1 className="mt-6 text-center text-3xl font-bold text-slate-900">Welcome Back</h1>
         <p className="mt-2 text-center text-sm text-gray-400">Sign in to continue to your account</p>
 
-        {/* TODO: error message yahan */}
+        <form className="mt-6 space-y-4"
+          onSubmit={submithandler}
+        >
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700"
+            >
+              <AlertCircle size={18} className="mt-0.5 shrink-0" />
+              <p className="break-words">{error}</p>
+            </div>
+          )}
 
-        {/* TODO: form ka onSubmit yahan */}
-        <form className="mt-6 space-y-4">
           <div>
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
-            {/* TODO: value + onChange */}
+            <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-slate-700">Username</label>
             <input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@company.com"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              id="username"
+              name="username"
+              type="username"
+              value={username}
+              onChange={(e) => {
+                setusername(e.target.value);
+                if (error) seterror("");
+              }}
+              disabled={loading}
+              placeholder="e.g Alexa"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
           <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
-            {/* TODO: value + onChange */}
             <input
               id="password"
               name="password"
               type="password"
+              value={password}
+              onChange={(e) => {
+                setpassword(e.target.value);
+                if (error) seterror("");
+              }}
+              disabled={loading}
               placeholder="Password"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
-          {/* TODO: onClick yahan */}
-          <button type="button" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+          <button
+            type="button"
+            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
             Forgot Password?
           </button>
 
-          {/* TODO: loading state par disabled */}
           <button
             type="submit"
-            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 cursor-pointer
-            "
-            
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Sign in
+            {loading && <Loader2 size={16} className="animate-spin" />}
+            {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
