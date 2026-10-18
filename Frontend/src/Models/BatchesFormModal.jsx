@@ -1,12 +1,16 @@
-import { api } from "../services/auth";
 import {Layers,X,Truck,Plus,Trash2} from 'lucide-react'
 import { useEffect, useState } from 'react';
 
 const emptyForm = {
-  "fabric_in_ids": [{ fabric_in_id: "", quantity_used: "" }],
+  "fabric_in_ids": [""],
   "current_stage": "",
   "current_status": "",
 };
+
+// Status k liye fixed options - backend model mai 'choices' define nahi,
+// is liye consistency yahin frontend se enforce kar rahe hain taake user
+// free-text type na kare aur misspelling na ho.
+const STATUS_OPTIONS = ["Pending", "In Progress", "Completed", "Cancelled"];
 
 const BatchesFormModal = ({isopen,onclose,initialdata,onsave}) => {
   const [form, setform] = useState(emptyForm)
@@ -23,18 +27,17 @@ const BatchesFormModal = ({isopen,onclose,initialdata,onsave}) => {
   // fabric_in_ids ek array hai (multiple fabric_in entries aik batch mai),
   // is liye inky liye alag se chota set of handlers - index k through
   // specific row ko update/remove karte hein.
-const handleFabricIdChange=(index,field,value)=>{
-  setform((prev)=>{
-    const updated=[...prev.fabric_in_ids]
-    updated[index]={...updated[index],[field]:value}
-    return {...prev,fabric_in_ids:updated}
-  })
-}
- 
-const addFabricIdField=()=>{
-  setform((prev)=>({...prev,fabric_in_ids:[...prev.fabric_in_ids,{fabric_in_id:"",quantity_used:""}]}))
-}
-  
+  const handleFabricIdChange=(index,value)=>{
+    setform((prev)=>{
+      const updated=[...prev.fabric_in_ids]
+      updated[index]=value
+      return {...prev,fabric_in_ids:updated}
+    })
+  }
+
+  const addFabricIdField=()=>{
+    setform((prev)=>({...prev,fabric_in_ids:[...prev.fabric_in_ids,""]}))
+  }
 
   const removeFabricIdField=(index)=>{
     setform((prev)=>({
@@ -43,38 +46,26 @@ const addFabricIdField=()=>{
     }))
   }
 
-  const submithandler = async (e) => {
-  e.preventDefault();
+  const submithandler=(e)=>{
+    e.preventDefault();
 
-  try {
-    let resp;
-
-    if (isedit) {
-      resp = await api.put(
-        `product_batches_api/${initialdata.batch_id}/`,
-        form
-      );
-    } else {
-      
-      resp = await api.post("product_batches_api/", form);
-    }
-
-    if (resp.data?.status === false) {
-      throw new Error(
-        resp.data?.message ||
-        JSON.stringify(resp.data?.error) ||
-        "Failed to save production batch."
-      );
-    }
+    // TODO: API CALL HERE
+    // if (isedit) {
+    //   fetch(`/api/production/batches/${initialdata.batch_id}/`, {
+    //     method: "PUT",
+    //     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    //     body: JSON.stringify(form),
+    //   }).then((res) => res.json()).then((res) => { if (res.status) onsave(form); });
+    // } else {
+    //   fetch("/api/production/batches/", {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    //     body: JSON.stringify(form),
+    //   }).then((res) => res.json()).then((res) => { if (res.status) onsave(form); });
+    // }
 
     onsave(form);
-  } catch (err) {
-    console.error(
-      "Failed to save production batch:",
-      err.response?.data || err.message
-    );
   }
-};
 
   if (!isopen) return null;
   return (
@@ -100,33 +91,28 @@ const addFabricIdField=()=>{
 
         <Section icon={Layers} label="Fabric In Entries">
           <div className='space-y-2.5'>
-            {form.fabric_in_ids.map((entry,index)=>(
-  <div key={index} className='flex items-center gap-2'>
-    <div className='flex-1'>
-      <input type="text"
-      required
-      placeholder={`Fabric In ID #${index+1}`}
-      className="input"
-      value={entry.fabric_in_id}
-      onChange={(e)=>handleFabricIdChange(index,"fabric_in_id",e.target.value)}
-      />
-    </div>
-    <div className='w-28'>
-      <input type="number"
-      required
-      placeholder="Qty used"
-      className="input"
-      value={entry.quantity_used}
-      onChange={(e)=>handleFabricIdChange(index,"quantity_used",e.target.value)}
-      />
-    </div>
-    {form.fabric_in_ids.length>1 && (
-      <button type="button" onClick={()=>removeFabricIdField(index)} className='p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 shrink-0'>
-        <Trash2 size={15} />
-      </button>
-    )}
-  </div>
-))}
+            {form.fabric_in_ids.map((id,index)=>(
+              <div key={index} className='flex items-center gap-2'>
+                <div className='flex-1'>
+                  <input type="text"
+                  required
+                  placeholder={`Fabric In ID #${index+1}`}
+                  className="input"
+                  value={id}
+                  onChange={(e)=>handleFabricIdChange(index,e.target.value)}
+                  />
+                </div>
+                {form.fabric_in_ids.length>1 && (
+                  <button
+                  type="button"
+                  onClick={()=>removeFabricIdField(index)}
+                  className='p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 shrink-0'
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
           <button
           type="button"
@@ -142,20 +128,23 @@ const addFabricIdField=()=>{
           <Field label="Current Stage" >
             <input type="text"
             required
-            placeholder="e.g Ready To Manufacture"
             value={form.current_stage}
             onChange={(e)=>handlechange("current_stage",e.target.value)}
             className='input'
             />
           </Field>
           <Field label="Status" >
-            <input type="text"
+            <select
             required
-            placeholder="e.g In Progress"
             value={form.current_status}
             onChange={(e)=>handlechange("current_status",e.target.value)}
             className='input'
-            />
+            >
+              <option value="">Select status</option>
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
           </Field>
           </div>
         </Section>

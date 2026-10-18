@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { X, ShieldAlert, Save, StickyNote } from "lucide-react";
+import { X, ShieldAlert, Save, StickyNote, AlertCircle } from "lucide-react";
+import { api } from "../services/auth";
 
 // ============================================================
 // SuspiciousInvestigationModal
@@ -20,39 +21,69 @@ const STATUS_OPTIONS = ["Pending", "Investigating", "Resolved", "Confirmed", "Re
 export default function SuspiciousInvestigationModal({ open, data, onClose, onSave }) {
   const [investigationStatus, setInvestigationStatus] = useState("Pending");
   const [remarks, setRemarks] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (data) {
       setInvestigationStatus(data.investigation_status || "Pending");
       setRemarks(data.remarks || "");
     }
+    setError("");
+    setLoading(false);
   }, [data, open]);
 
   if (!open || !data) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return;
 
     const payload = {
       investigation_status: investigationStatus,
       remarks,
     };
 
-    // TODO: API CALL HERE
-    // fetch(`/suspicious_products_api/${data.suspicious_id}/`, {
-    //   method: "PUT",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //     Authorization: `Bearer ${token}`,
-    //   },
-    //   body: JSON.stringify(payload),
-    // })
-    //   .then((res) => res.json())
-    //   .then((res) => {
-    //     if (res.status) onSave(payload);
-    //   });
+    try {
+      setLoading(true);
+      setError("");
 
-    onSave(payload);
+      const res = await api.put(
+        `suspicious_products_api/${data.suspicious_id}/`,
+        payload
+      );
+
+      if (res.data?.status === false) {
+        throw new Error(
+          res.data?.message ||
+            (res.data?.error
+              ? JSON.stringify(res.data.error)
+              : "Failed to update suspicious product.")
+        );
+      }
+
+      onSave();
+    } catch (err) {
+      console.error(
+        "Failed to update suspicious product:",
+        err.response?.data || err.message
+      );
+
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.detail ||
+          (err.response?.data?.error
+            ? typeof err.response.data.error === "string"
+              ? err.response.data.error
+              : JSON.stringify(err.response.data.error)
+            : null) ||
+          err.message ||
+          "Failed to update suspicious product."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -70,7 +101,12 @@ export default function SuspiciousInvestigationModal({ open, data, onClose, onSa
             </h3>
             <p className="text-xs text-slate-400 truncate">Update the investigation</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="text-slate-400 hover:text-slate-600 shrink-0 disabled:opacity-50"
+          >
             <X size={18} />
           </button>
         </div>
@@ -89,6 +125,22 @@ export default function SuspiciousInvestigationModal({ open, data, onClose, onSa
         </div>
 
         <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-5 space-y-5">
+
+          {error && (
+            <div className="rounded-lg border border-red-100 bg-red-50 p-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-red-600">
+                    Unable to update suspicious product
+                  </p>
+                  <p className="text-sm text-red-500 break-words mt-1">
+                    {error}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <Field label="Investigation Status">
             <select
@@ -116,16 +168,18 @@ export default function SuspiciousInvestigationModal({ open, data, onClose, onSa
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50"
+              disabled={loading}
+              className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 shadow-sm shadow-blue-200"
+              disabled={loading}
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 shadow-sm shadow-blue-200 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <Save size={15} />
-              Save Changes
+              {loading ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

@@ -46,6 +46,7 @@ class ready_to_manufacture(models.Model):
     fabric_quality=models.ForeignKey(FabricQuality,on_delete=models.PROTECT)
     color=models.CharField(max_length=100)
     assigned_at=models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     status=models.CharField(max_length=100)
     notes=models.TextField()
 

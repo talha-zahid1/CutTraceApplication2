@@ -1,51 +1,101 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 import SuspiciousProductsTable from "../Tables/SuspiciousProductsTable";
 import SuspiciousInvestigationModal from "../Models/SuspiciousInvestigationModal";
 import Navbar from "../components/Navbar";
+import { api } from "../services/auth";
 
 // No "Add" button/flow on this page — suspicious_view has no POST.
 // These entries are created automatically by testing_view when a
 // manufactured product falls outside the expected standard.
 
-const dummyData = [
-  { suspicious_id: 1, batch_id: 3, manufactured_id: 3, fabric_quality: 1, original_quantity_kg: 60, actual_wastage_kg: 12, actual_wastage_percentage: 20, expected_wastage_kg: 7.2, expected_wastage_percentage: 12, actual_final_product_quantity: 30, expected_final_product_quantity: 45, final_product_percentage: 70, mismatched_wastage_percentage: 66.7, mismatched_final_product_percentage: 33.3, reason: "Actual output outside acceptable range of expected standard", detected_at: "2024-12-06", investigation_status: "Pending", remarks: "" },
-  { suspicious_id: 2, batch_id: 5, manufactured_id: 5, fabric_quality: 2, original_quantity_kg: 90, actual_wastage_kg: 14, actual_wastage_percentage: 15.5, expected_wastage_kg: 9, expected_wastage_percentage: 10, actual_final_product_quantity: 55, expected_final_product_quantity: 62, final_product_percentage: 88.7, mismatched_wastage_percentage: 55, mismatched_final_product_percentage: 11.3, reason: "Wastage exceeded tolerance", detected_at: "2024-12-07", investigation_status: "Investigating", remarks: "Checking machine calibration" },
-  { suspicious_id: 3, batch_id: 2, manufactured_id: 2, fabric_quality: 1, original_quantity_kg: 80, actual_wastage_kg: 6, actual_wastage_percentage: 7.5, expected_wastage_kg: 8, expected_wastage_percentage: 10, actual_final_product_quantity: 60, expected_final_product_quantity: 58, final_product_percentage: 103.4, mismatched_wastage_percentage: 25, mismatched_final_product_percentage: 3.4, reason: "Output higher than expected — verifying measurement", detected_at: "2024-12-05", investigation_status: "Resolved", remarks: "Confirmed measurement error, corrected in system" },
-  { suspicious_id: 4, batch_id: 4, manufactured_id: 4, fabric_quality: 3, original_quantity_kg: 45, actual_wastage_kg: 3, actual_wastage_percentage: 6.6, expected_wastage_kg: 4.5, expected_wastage_percentage: 10, actual_final_product_quantity: 35, expected_final_product_quantity: 33, final_product_percentage: 106, mismatched_wastage_percentage: 34, mismatched_final_product_percentage: 6, reason: "Minor deviation flagged for review", detected_at: "2024-12-07", investigation_status: "Confirmed", remarks: "Genuine defect, fabric batch quarantined" },
-];
-
 const PAGE_SIZE = 5;
 
+// Backend ke message / detail / error, teeno check karta hai
+const getErrorMessage = (err, fallback) => {
+  const data = err.response?.data;
+
+  if (typeof data?.message === "string") return data.message;
+  if (typeof data?.detail === "string") return data.detail;
+  if (typeof data?.error === "string") return data.error;
+  if (data?.error) return JSON.stringify(data.error);
+
+  return err.message || fallback;
+};
+
 export default function SuspiciousProductsPage() {
-  const [data, setData] = useState(dummyData);
+  const [data, setData] = useState([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
 
-  useEffect(() => {
-    // TODO: API CALL HERE
-    // fetch("/suspicious_products_api/", {
-    //   headers: { Authorization: `Bearer ${token}` },
-    // })
-    //   .then((res) => res.json())
-    //   .then((res) => {
-    //     if (res.status) setData(res.data);
-    //   });
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const resp = await api.get("suspicious_products_api/");
+
+      if (resp.data?.status === false) {
+        throw new Error(
+          resp.data?.message ||
+            (resp.data?.error
+              ? JSON.stringify(resp.data.error)
+              : "Failed to load suspicious products.")
+        );
+      }
+
+      if (Array.isArray(resp.data?.data)) {
+        setData(resp.data.data);
+      } else if (resp.data?.status === true) {
+        // Success hai lekin koi record nahi
+        setData([]);
+      } else {
+        throw new Error(
+          resp.data?.message ||
+            "Invalid suspicious products received from the server."
+        );
+      }
+    } catch (err) {
+      console.error(
+        "Failed to fetch suspicious products:",
+        err.response?.data || err.message
+      );
+
+      setError(getErrorMessage(err, "Failed to load suspicious products."));
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return data;
+
     const q = search.toLowerCase();
+
     return data.filter(
       (row) =>
-        row.investigation_status.toLowerCase().includes(q) ||
-        row.reason.toLowerCase().includes(q) ||
-        row.remarks.toLowerCase().includes(q) ||
-        String(row.batch_id).includes(q) ||
-        String(row.suspicious_id).includes(q)
+        String(row.investigation_status ?? "").toLowerCase().includes(q) ||
+        String(row.reason ?? "").toLowerCase().includes(q) ||
+        String(row.remarks ?? "").toLowerCase().includes(q) ||
+        String(row.batch_id ?? "").includes(q) ||
+        String(row.suspicious_id ?? "").includes(q)
     );
   }, [data, search]);
 
@@ -57,13 +107,10 @@ export default function SuspiciousProductsPage() {
     setIsModalOpen(true);
   };
 
-  // Backend PUT is partial — only investigation_status + remarks change
-  const handleSave = (payload) => {
-    setData((prev) =>
-      prev.map((r) =>
-        r.suspicious_id === editingRow.suspicious_id ? { ...r, ...payload } : r
-      )
-    );
+  // Backend PUT is partial — only investigation_status + remarks change.
+  // Save ke baad server se dobara load, taake data hamesha sahi rahe.
+  const handleSave = () => {
+    fetchData();
     setIsModalOpen(false);
     setEditingRow(null);
   };
@@ -73,11 +120,16 @@ export default function SuspiciousProductsPage() {
       <Navbar />
 
       <div className="flex items-center justify-between gap-2 mb-5 mt-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-slate-800 truncate">Suspicious Products</h2>
+        <h2 className="text-lg sm:text-xl font-semibold text-slate-800 truncate">
+          Suspicious Products
+        </h2>
       </div>
 
       <div className="relative mb-4 w-full sm:max-w-xs">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search
+          size={16}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+        />
         <input
           type="text"
           placeholder="Search status, reason, batch..."
@@ -90,37 +142,78 @@ export default function SuspiciousProductsPage() {
         />
       </div>
 
-      <SuspiciousProductsTable rows={paginated} onEdit={openEditModal} />
+      {loading ? (
+        <div className="flex min-h-64 items-center justify-center">
+          <p className="text-sm font-medium text-slate-500">
+            Loading suspicious products...
+          </p>
+        </div>
+      ) : error ? (
+        <div
+          role="alert"
+          className="flex min-h-64 flex-col items-center justify-center gap-3 px-4 text-center"
+        >
+          <AlertCircle size={28} className="text-red-500" />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-        <p className="text-xs text-slate-400">
-          Showing {paginated.length} of {filtered.length} entries
-        </p>
-        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-red-500">
+            Unable to load suspicious products
+          </p>
+
+          <p className="max-w-lg break-words text-sm text-slate-500">
+            {error}
+          </p>
+
           <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="p-1.5 rounded-md border border-slate-200 text-slate-500 disabled:opacity-40"
+            type="button"
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
           >
-            <ChevronLeft size={16} />
-          </button>
-          <span className="text-xs text-slate-500">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="p-1.5 rounded-md border border-slate-200 text-slate-500 disabled:opacity-40"
-          >
-            <ChevronRight size={16} />
+            <RefreshCw size={15} />
+            Try Again
           </button>
         </div>
-      </div>
+      ) : (
+        <>
+          <SuspiciousProductsTable rows={paginated} onEdit={openEditModal} />
+
+          <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+            <p className="text-xs text-slate-400">
+              Showing {paginated.length} of {filtered.length} entries
+            </p>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1.5 rounded-md border border-slate-200 text-slate-500 disabled:opacity-40"
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              <span className="text-xs text-slate-500">
+                Page {page} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-1.5 rounded-md border border-slate-200 text-slate-500 disabled:opacity-40"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       <SuspiciousInvestigationModal
         open={isModalOpen}
         data={editingRow}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingRow(null);
+        }}
         onSave={handleSave}
       />
     </div>

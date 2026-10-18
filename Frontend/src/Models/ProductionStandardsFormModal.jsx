@@ -9,7 +9,7 @@ const emptyForm = {
   standard_wastage_quantity: "",
 };
 
-export default function ProductionStandardsFormModal({ open, initialData, onClose, onSave }) {
+export default function ProductionStandardsFormModal({ open, initialData, onClose, onSave, qualities }) {
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
@@ -62,14 +62,20 @@ export default function ProductionStandardsFormModal({ open, initialData, onClos
                   className="input"
                 />
               </Field>
-              <Field label="Fabric Quality (ID)">
-                <input
-                  type="number"
+              <Field label="Fabric Quality">
+                <select
                   required
                   value={form.fabric_quality}
                   onChange={(e) => handleChange("fabric_quality", e.target.value)}
                   className="input"
-                />
+                >
+                  <option value="">Select Quality</option>
+{qualities.map((q) => (
+  <option key={q.quality_id} value={q.quality_id}>
+    {q.name}
+  </option>
+))}
+                </select>
               </Field>
             </div>
           </Section>
@@ -87,7 +93,7 @@ export default function ProductionStandardsFormModal({ open, initialData, onClos
                   className="input"
                 />
               </Field>
-              <Field label="Final Product Qty (kg)">
+              <Field label="Final Product Qty ">
                 <input
                   type="number"
                   step="0.001"

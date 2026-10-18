@@ -1,44 +1,108 @@
 import React, { useState, useEffect } from "react";
-import { X, PackageCheck, Save, StickyNote } from "lucide-react";
+import { X, PackageCheck, Save, StickyNote, AlertCircle } from "lucide-react";
+import { api } from "../services/auth";
 
 // ============================================================
 // ReadyToDeliverNotesModal
 // Edit-only — no POST/DELETE on this endpoint. The backend's PUT
 // is partial=True, so we only send what a user would actually
-// change here: `notes`. Everything else (quantity, wastage,
-// quality, status) is computed/generated upstream and shown as
+// change here: `notes` and `status`. Everything else (quantity,
+// wastage, quality) is computed/generated upstream and shown as
 // read-only reference info.
 // ============================================================
 
+const STATUS_OPTIONS = ["Ready", "Delivered"];
+
+// Example: 11 Oct 2026, 10:49 pm
+function formatDateTime(value) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (isNaN(d)) return String(value);
+
+  const date = d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  const time = d
+    .toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    })
+    .toLowerCase();
+
+  return `${date}, ${time}`;
+}
+
 export default function ReadyToDeliverNotesModal({ open, data, qualityName, onClose, onSave }) {
   const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState("Ready");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (data) setNotes(data.notes || "");
+    if (data) {
+      setNotes(data.notes || "");
+      // Case match karne ke liye (DB mein "ready" ya "Ready" dono ho sakta hai)
+      const match = STATUS_OPTIONS.find(
+        (opt) => opt.toLowerCase() === String(data.status || "").toLowerCase()
+      );
+      setStatus(match || "Ready");
+    }
+    setError("");
+    setLoading(false);
   }, [data, open]);
 
   if (!open || !data) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const payload = { notes };
+    if (loading) return;
 
-    // TODO: API CALL HERE
-    // fetch(`/ready_to_deliver_api/${data.ready_to_deliver_id}/`, {
-    //   method: "PUT",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //     Authorization: `Bearer ${token}`,
-    //   },
-    //   body: JSON.stringify(payload),
-    // })
-    //   .then((res) => res.json())
-    //   .then((res) => {
-    //     if (res.status) onSave(payload);
-    //   });
+    const payload = { notes, status };
 
-    onSave(payload);
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await api.put(
+        `ready_to_deliver_api/${data.ready_to_deliver_id}/`,
+        payload
+      );
+
+      if (res.data?.status === false) {
+        throw new Error(
+          res.data?.message ||
+            (res.data?.error
+              ? JSON.stringify(res.data.error)
+              : "Failed to update ready to deliver entry.")
+        );
+      }
+
+      onSave();
+    } catch (err) {
+      console.error(
+        "Failed to update ready to deliver entry:",
+        err.response?.data || err.message
+      );
+
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.detail ||
+          (err.response?.data?.error
+            ? typeof err.response.data.error === "string"
+              ? err.response.data.error
+              : JSON.stringify(err.response.data.error)
+            : null) ||
+          err.message ||
+          "Failed to update ready to deliver entry."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -56,7 +120,12 @@ export default function ReadyToDeliverNotesModal({ open, data, qualityName, onCl
             </h3>
             <p className="text-xs text-slate-400 truncate">Ready to Deliver #{data.ready_to_deliver_id}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="text-slate-400 hover:text-slate-600 shrink-0 disabled:opacity-50"
+          >
             <X size={18} />
           </button>
         </div>
@@ -70,12 +139,40 @@ export default function ReadyToDeliverNotesModal({ open, data, qualityName, onCl
             <Row label="Quality" value={qualityName} />
             <Row label="Wastage" value={`${data.wastage_kg} kg (${data.wastage_percentage}%)`} />
             <Row label="Final Product %" value={`${data.final_product_percentage}%`} />
-            <Row label="Prepared" value={String(data.prepared_at).slice(0, 10)} />
-            <Row label="Status" value={data.status} />
+            <Row label="Prepared" value={formatDateTime(data.prepared_at)} />
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-5 space-y-5">
+
+          {error && (
+            <div className="rounded-lg border border-red-100 bg-red-50 p-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-red-600">
+                    Unable to update entry
+                  </p>
+                  <p className="text-sm text-red-500 break-words mt-1">
+                    {error}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Field label="Status">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="input"
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </Field>
+
           <Field label="Notes" icon={StickyNote}>
             <textarea
               rows={3}
@@ -90,16 +187,18 @@ export default function ReadyToDeliverNotesModal({ open, data, qualityName, onCl
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50"
+              disabled={loading}
+              className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 shadow-sm shadow-blue-200"
+              disabled={loading}
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 shadow-sm shadow-blue-200 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <Save size={15} />
-              Save Changes
+              {loading ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

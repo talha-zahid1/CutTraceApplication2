@@ -2,16 +2,15 @@ import React, { useState } from "react";
 import { NAV_SECTIONS } from "./sidebarConfig";
 import SidebarItem from "./SidebarItem";
 import logo from "../assets/Logo.png";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 
 export default function Sidebar() {
-  const [active, setActive] = useState("/dashboard");
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleClick = (path) => {
-    setActive(path);
     navigate(path);
     setIsOpen(false);
   };
@@ -64,7 +63,7 @@ export default function Sidebar() {
                   <SidebarItem
                     key={item.path}
                     item={item}
-                    active={active === item.path}
+                    active={location.pathname === item.path}
                     onClick={() => handleClick(item.path)}
                   />
                 ))}

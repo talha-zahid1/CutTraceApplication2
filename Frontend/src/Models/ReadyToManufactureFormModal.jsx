@@ -100,13 +100,21 @@ export default function ReadyToManufactureFormModal({
     try {
       let resp;
 
+      // Sirf editable fields bhejo. Edit mode mein form ke andar row ki
+      // baqi fields (updated_at: null, assigned_at, ready_manufacture_id)
+      // bhi aa jati hain, jo backend ko null bhej deti thin.
+      const payload = Object.keys(emptyForm).reduce((acc, key) => {
+        acc[key] = form[key];
+        return acc;
+      }, {});
+
       if (isEdit) {
         resp = await api.put(
           `ready_to_manufacture_api/${initialData.ready_manufacture_id}/`,
-          form
+          payload
         );
       } else {
-        resp = await api.post("ready_to_manufacture_api/", form);
+        resp = await api.post("ready_to_manufacture_api/", payload);
       }
 
       if (resp.data?.status === false) {
@@ -117,8 +125,7 @@ export default function ReadyToManufactureFormModal({
         );
       }
 
-      console.log(form);
-      onSave(form);
+      onSave(payload);
     } catch (err) {
       console.error(
         "Failed to save Ready To Manufacture entry:",

@@ -32,7 +32,7 @@ const ProductionBatchesPage = () => {
       setError("");
 
       const resp = await api.get("product_batches_api/");
-      console.log(resp.data.data)
+      
       
       if (resp.data?.status === false) {
         throw new Error(

@@ -139,6 +139,7 @@ export default function ReadyToManufactureTable({
                 </p>
 
                 <p className="text-xs text-slate-400">
+                  
                   Updated: {row.updated_at ? formatDateTime(row.updated_at) : "—"}
                 </p>
               </div>

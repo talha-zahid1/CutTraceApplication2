@@ -14,7 +14,7 @@ import ProductionStandardsPage from './Pages/ProductionStandardsPage'
 import OverallProductionReportPage from './Pages/OverallProductionReportPage'
 import SuspiciousProductsReportPage from './Pages/SuspiciousProductsReportPage'
 import DeliveredProductsReportPage from './Pages/DeliveredProductsReportPage'
-
+import TestingPage from './Pages/TestingPage'
 
 const App = () => {
   return (
@@ -40,6 +40,7 @@ const App = () => {
                   <Route path="/ready-to-deliver" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <ReadyToDeliverPage /></div>} />
                   <Route path="/delivered-products" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <DeliveredProductsPage /></div>} />
                   <Route path="/standards" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <ProductionStandardsPage /></div>} />
+                  <Route path="/testing" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <TestingPage /></div>} />
                   {/* Reports */}
                   <Route path="/reports/overall-production" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <OverallProductionReportPage /></div>} />
                   <Route path="/reports/suspicious-products" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <SuspiciousProductsReportPage /></div>} />

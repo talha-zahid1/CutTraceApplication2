@@ -7,11 +7,11 @@ from rest_framework.permissions import IsAuthenticated
 from ..custom_permission import IsAdmin
 
 class Manufactured_view(APIView):
-    def get_permissions(self):
-        if self.request.method=='GET':
-            return [IsAuthenticated()]
-        else:
-            return [IsAdmin()]
+    # def get_permissions(self):
+    #     if self.request.method=='GET':
+    #         return [IsAuthenticated()]
+    #     else:
+    #         return [IsAdmin()]
     def get(self,req,manufactured_id=None):
         if not manufactured_id:
             products=manufactured_products.objects.all()
@@ -63,11 +63,11 @@ class Manufactured_view(APIView):
                     'status':True,
                     'message':f'oops! product{manufactured_id} is not Manufactured yet'
                 })
-            if product.status.lower()!='pending':
-                return Response({
-                    'status':False,
-                    'message':"Oops!  product can't be Updated"
-                })
+            # if product.status.lower()!='pending':
+            #     return Response({
+            #         'status':False,
+            #         'message':"Oops!  product can't be Updated"
+            #     })
             serializer=manufactured_products_serializer(product,data=req.data)
             if serializer.is_valid():
                 serializer.save()
@@ -87,11 +87,13 @@ class Manufactured_view(APIView):
                 'status':True,
                 'message':f'oops! product{manufactured_id} is not Manufactured yet'
             })
+        
         if product.status.lower()!='pending':
             return Response({
                 'status':False,
                 'message':"Oops!  product can't be cancelled"
-                })
+                },status=400
+                )
         product.status='cancelled'
         product.save()
         return Response({

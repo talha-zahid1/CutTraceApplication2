@@ -7,11 +7,11 @@ from rest_framework.permissions import IsAuthenticated
 from ..custom_permission import IsAdmin
 
 class ready_to_deliver_view(APIView):
-    def get_permissions(self):
-        if self.request.method=='GET':
-            return [IsAuthenticated()]
-        else:
-            return [IsAdmin()]
+    # def get_permissions(self):
+    #     if self.request.method=='GET':
+    #         return [IsAuthenticated()]
+    #     else:
+    #         return [IsAdmin()]
     def get(self, req, ready_to_deliver_id=None):
         if ready_to_deliver_id:
             product = ready_to_deliver.objects.filter(
@@ -19,7 +19,7 @@ class ready_to_deliver_view(APIView):
             ).first()
             if not product:
                 return Response(
-                    {"status": False, "message": "product is not ready yet"}
+                    {"status": True, "message": "product is not ready yet"}
                 )
             serilizer = ready_to_deliver_serializer(product)
             return Response(
@@ -29,7 +29,7 @@ class ready_to_deliver_view(APIView):
             products = ready_to_deliver.objects.all()
             if not products:
                 return Response(
-                    {"status": False, "message": "No product is not ready yet"}
+                    {"status": True, "message": "No product is not ready yet"}
                 )
             serilizer = ready_to_deliver_serializer(products, many=True)
             return Response(

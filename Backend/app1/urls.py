@@ -18,7 +18,7 @@ from .Views import (
     production_pipeline_api,
     inspection_values_api,
     fabric_quality_api,
-    BatcFabricIn_api
+    BatcFabricIn_api,
 )
 
 urlpatterns = [
@@ -33,11 +33,14 @@ urlpatterns = [
     path("ready_to_manufacture_api/", ready_to_view.as_view()),
     path("ready_to_manufacture_api/<int:ready_manufacture_id>/", ready_to_view.as_view()),
     path("manufacturing_api/", Manufactured_view.as_view()),
+    path("manufacturing_api/<int:manufactured_id>/", Manufactured_view.as_view()),
     path("testing_api/", testing_view.as_view()),
     path("suspicious_products_api/", suspicious_view.as_view()),
     path("ready_to_deliver_api/", ready_to_deliver_view.as_view()),
     path("delivered_products_api/", delivered_view.as_view()),
+    path("delivered_products_api/<int:delivery_id>/", delivered_view.as_view()),
     path("production_standards_api/", standard_view.as_view()),
+    path("production_standards_api/<int:standard_id>/", standard_view.as_view()),
     path("suspicious_batches_satistics_api/", suspicious_batches_stats_view.as_view()),
     path("delivered_product_statistics_api/", delivered_products_stats_view.as_view()),
     path("overall_production_satistics_api/", Overall_production_stats_view.as_view()),

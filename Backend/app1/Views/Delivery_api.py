@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from ..models import ready_to_deliver, delivered_products
 from django.db import transaction
 from ..serializers import delivered_products_serializer
+from rest_framework.decorators import api_view
+from django.contrib.auth.decorators import login_required
 
 
 class delivered_view(APIView):
@@ -90,8 +92,8 @@ class delivered_view(APIView):
 
                 if serializer.is_valid():
                     serializer.save()
-                    product.status = 'delivered'
                     product.save()
+                    product.status = 'delivered'
 
                     return Response({
                         'status': True,
@@ -115,10 +117,38 @@ class delivered_view(APIView):
                     'error': 'The product is not ready to deliver yet'
                 })
 
-    def put(self, req):
-        pass
-
-    def delete(self, req):
-        # Just update the status to cancel
-        pass
+    def put(self, req,delivery_id):
+        obj=delivered_products.objects.filter(delivery_id=delivery_id).first()
+        if not obj :
+            return Response({
+                'status':False,
+                'message':"The product doesn't exist"
+            },status=404)
+        serializer=delivered_products_serializer(obj,data=req.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'status':True,
+                'message':'Product Updated'
+            })
+        return Response({
+            'status':False,
+            'error':serializer.errors
+        },status=400)
+    
+    def delete(self,req,delivery_id):
+        obj=delivered_products.objects.filter(delivery_id=delivery_id).first()
+        if not obj :
+            return Response({
+                'status':False,
+                'message':"The product doesn't exist"
+            },status=404)
+        obj.delete()
+        return Response({
+            'status':True,
+            'message':'entry deleted'
+        })
+        
+        
+        
 

@@ -10,7 +10,7 @@ def get(req):
     obj=FabricQuality.objects.all()
     if not obj:
         return Response({
-            'status':True,
+            'status':False,
             'message':'No Fabric Qualities Entered'
         }) 
     serializer=FabricQuality_serializer(obj,many=True)

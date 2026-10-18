@@ -139,26 +139,7 @@ export default function DeliveredProductsFormModal({ open, initialData, onClose,
                   className="input"
                 />
               </Field>
-              <Field label="Total Cost">
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={form.total_cost}
-                  onChange={(e) => handleChange("total_cost", e.target.value)}
-                  className="input"
-                />
-              </Field>
-              <Field label="Net Profit">
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={form.net_profit}
-                  onChange={(e) => handleChange("net_profit", e.target.value)}
-                  className="input"
-                />
-              </Field>
+              
             </div>
           </Section>
 
