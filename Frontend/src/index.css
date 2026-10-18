@@ -1,5 +1,38 @@
 @import "tailwindcss";
-html, body, #root {
+
+html,
+body,
+#root {
+  width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+/* Thin scrollbar that fades after scrolling */
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+/* Chrome, Edge, Safari */
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 999px;
+}
+
+/* Show a thin scrollbar when the navigation is hovered */
+.sidebar-scrollbar:hover {
+  scrollbar-color: #a8b5cc transparent;
+}
+
+.sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: #a8b5cc;
 }

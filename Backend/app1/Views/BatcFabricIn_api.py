@@ -5,6 +5,11 @@ from django.db.models import Sum
 from rest_framework.response import Response
 
 
+
+
+
+
+
 @api_view(['GET'])
 def Batch_entries_view(req):
     try:

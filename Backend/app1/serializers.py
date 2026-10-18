@@ -1,5 +1,5 @@
 from decimal import Decimal, ROUND_HALF_UP
-from .models import production_batches,production_standards,fabric_in,delivered_products,suspicious_products,manufactured_products,ready_to_deliver,ready_to_manufacture,FabricQuality,BatchFabricIn
+from .models import production_batches,production_standards,fabric_in,delivered_products,suspicious_products,manufactured_products,ready_to_deliver,ready_to_manufacture,FabricQuality,BatchFabricIn,UserProfile
 from rest_framework import serializers
 from django.db import models
 
@@ -143,4 +143,16 @@ class user_serializer(serializers.Serializer):
     username=serializers.CharField()
     password=serializers.CharField(write_only=True)
     email=serializers.EmailField()
-    
+class profile_serializer(serializers.ModelSerializer):
+    def validate_role(self, value):
+        request = self.context.get('request')
+        user = request.user
+
+        if not user.is_authenticated or user.userprofile.role != 'owner':
+            raise serializers.ValidationError("Only Owner can assign roles.")
+
+        return value
+    class Meta:
+        model=UserProfile
+        fields = ['user', 'mobile_no', 'role']
+        

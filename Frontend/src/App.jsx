@@ -15,6 +15,7 @@ import OverallProductionReportPage from './Pages/OverallProductionReportPage'
 import SuspiciousProductsReportPage from './Pages/SuspiciousProductsReportPage'
 import DeliveredProductsReportPage from './Pages/DeliveredProductsReportPage'
 import TestingPage from './Pages/TestingPage'
+import Profile from './Pages/Profile';
 
 const App = () => {
   return (
@@ -25,10 +26,10 @@ const App = () => {
         <Route 
         path='*'
         element={
-            <div className="flex min-h-screen">
+            <div className="min-h-screen lg:pl-[270px]">
               <Sidebar />
 
-              <main className="flex-1">
+              <main className="min-h-screen w-full">
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/fabricin" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <FabricInPage /></div>} />
@@ -45,6 +46,8 @@ const App = () => {
                   <Route path="/reports/overall-production" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <OverallProductionReportPage /></div>} />
                   <Route path="/reports/suspicious-products" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <SuspiciousProductsReportPage /></div>} />
                   <Route path="/reports/delivered-products" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <DeliveredProductsReportPage /></div>} />
+                  {/* Account */}
+                  <Route path="/profile" element={<div className="min-h-screen w-full flex bg-[#EEF1FA]"> <Profile /></div>} />
                 </Routes>
               </main>
             </div>

@@ -49,37 +49,56 @@ export default function TestingPage() {
   const [result, setResult] = useState(null);
 
   const runTest = async (e) => {
-    e.preventDefault();
-    if (!manufacturedId.trim() || loading) return;
+  e.preventDefault();
 
-    setLoading(true);
-    setError("");
+  if (!manufacturedId.trim() || loading) return;
 
-    // TODO: API CALL HERE
-    // try {
-    //   const resp = await api.post("testing_api/", { manufactured_id: manufacturedId });
-    //   if (!resp.data?.status) {
-    //     throw new Error(resp.data?.message || "Testing failed.");
-    //   }
-    //   const outcome = resp.data.data ? "pass" : "fail";
-    //   setResult({ outcome, message: resp.data.message, data: resp.data.data });
-    // } catch (err) {
-    //   setError(err.response?.data?.message || err.message || "Something went wrong while testing.");
-    // } finally {
-    //   setLoading(false);
-    // }
+  setLoading(true);
+  setError("");
+  setResult(null);
 
-    // Dummy preview behavior: alternate pass/fail so both states are visible while testing.
-    setTimeout(() => {
-      const dummy =
-        Number(manufacturedId) % 2 === 0
-          ? DUMMY_FAIL_RESULT
-          : DUMMY_PASS_RESULT;
+  try {
+    const resp = await api.post("testing_api/", {
+      manufactured_id: manufacturedId,
+    });
 
-      setResult(dummy);
-      setLoading(false);
-    }, 650);
-  };
+    if (resp?.data?.status !== true) {
+      const backendError =
+        resp?.data?.message ||
+        resp?.data?.detail ||
+        (resp?.data?.error
+          ? JSON.stringify(resp.data.error)
+          : null);
+
+      throw new Error(backendError || "Testing failed.");
+    }
+
+    const outcome = resp.data.data ? "pass" : "fail";
+
+    setResult({
+      outcome,
+      message: resp.data.message || "Testing completed.",
+      data: resp.data.data,
+    });
+  } catch (err) {
+    console.error(
+      "Failed to test manufactured product:",
+      err.response?.data || err.message
+    );
+
+    setError(
+      err.response?.data?.message ||
+        err.response?.data?.detail ||
+        (err.response?.data?.error
+          ? JSON.stringify(err.response.data.error)
+          : null) ||
+        err.message ||
+        "Something went wrong while testing."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="mx-3 my-4 min-h-screen min-w-0 flex-1 overflow-x-hidden rounded-2xl bg-[#EEF1FB] p-4 sm:mx-6 sm:my-6 sm:p-6 lg:mx-10 lg:my-8 lg:p-8">

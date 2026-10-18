@@ -19,12 +19,16 @@ from .Views import (
     inspection_values_api,
     fabric_quality_api,
     BatcFabricIn_api,
+    get_profile,
+    Profile_Update
 )
 
 urlpatterns = [
     path("api/token/", TokenObtainPairView.as_view()),
     path("api/token/refresh/", TokenRefreshView.as_view()),
     path("register/",register_view.as_view()),
+    path("profile_api/",get_profile),
+    path("update_profile_api/",Profile_Update),
     path("logout/",logout_view.as_view()),
     path("fabric_in_api/", Fabric_in_view.as_view()),
     path("fabric_in_api/<int:fabric_in_id>/", Fabric_in_view.as_view()),

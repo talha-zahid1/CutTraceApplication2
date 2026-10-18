@@ -1,4 +1,17 @@
 from django.db import models
+from django.contrib.auth.models import User
+
+class UserProfile(models.Model):
+    class Role(models.TextChoices):
+        NORMAL_USER = "normal_user", "Normal User"
+        ADMIN = "admin", "Admin"
+        OWNER = "owner", "Owner"
+
+
+    user=models.OneToOneField(User,on_delete=models.CASCADE)
+    mobile_no=models.CharField(max_length=11)
+    role=models.CharField(max_length=20,choices=Role.choices,default=Role.NORMAL_USER)
+
 
 # Create your models here.
 class FabricQuality(models.Model):

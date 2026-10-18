@@ -1,18 +1,10 @@
-// ============================================================
-// sidebarConfig.js
-// Nav structure derived from the Backend API Tree. Add/remove
-// items here — Sidebar.jsx and SidebarItem.jsx don't need to
-// change when nav items change.
-//
-// `icon` is a lucide-react icon name (see ICON_MAP in
-// SidebarItem.jsx). `path` is a placeholder route — wire it up
-// to your actual router (react-router / Next.js) when ready.
-// ============================================================
 
 export const NAV_SECTIONS = [
   {
-    section: null, // no heading for the top-level item
-    items: [{ label: "Dashboard", path: "/dashboard", icon: "LayoutDashboard" }],
+    section: null,
+    items: [
+      { label: "Dashboard", path: "/dashboard", icon: "LayoutDashboard" },
+    ],
   },
   {
     section: "Production",
@@ -36,4 +28,5 @@ export const NAV_SECTIONS = [
       { label: "Delivered Products", path: "/reports/delivered-products", icon: "ReceiptText" },
     ],
   },
+  
 ];

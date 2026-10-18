@@ -91,7 +91,7 @@ export default function ManufacturingTable({ rows, qualities, onEdit, onDelete }
                 <p className="text-sm text-slate-400 mt-1 break-words">
                   To {row.receiver_name} &bull; Master {row.master_name} &bull;
                   Tailor {row.tailor_name} &bull; Batch #{row.batch_id} &bull;
-                  RID #{row.ready_to_manufacture_id}
+                  MID #{row.manufactured_id}
                 </p>
               </div>
 
