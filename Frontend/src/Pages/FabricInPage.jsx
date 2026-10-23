@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useContext } from "react";
 import { Plus, Search, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from "lucide-react";
 import FabricInTable from "../Tables/FabricInTable";
 import FabricInFormModal from "../Models/FabricInFormModal";
 import DeleteConfirmModal from "../Models/DeleteConfirmModal";
 import Navbar from "../components/Navbar";
 import { api } from "../services/auth";
-
+import { model_context } from "../Context/ApiContext";
 const PAGE_SIZE = 5;
 
 export default function FabricInPage() {
@@ -15,13 +15,14 @@ export default function FabricInPage() {
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-
+  
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
-
+  
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingRow, setDeletingRow] = useState(null);
-
+  const { role, setrole } = useContext(model_context)
+  
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -90,28 +91,11 @@ export default function FabricInPage() {
     setIsFormOpen(true);
   };
 
-  const handleSave = (formData) => {
-    if (editingRow) {
-      setData((prev) =>
-        prev.map((r) =>
-          r.fabric_in_id === editingRow.fabric_in_id
-            ? { ...r, ...formData }
-            : r
-        )
-      );
-    } else {
-      const newRow = {
-        ...formData,
-        fabric_in_id: Math.max(0, ...data.map((r) => r.fabric_in_id)) + 1,
-        received_at: new Date().toISOString().slice(0, 10),
-      };
-
-      setData((prev) => [newRow, ...prev]);
-      setPage(1);
-    }
-
-    setIsFormOpen(false);
-  };
+ const handleSave = async () => {
+  await fetchData();
+  setPage(1);
+  setIsFormOpen(false);
+};
 
   const openDeleteConfirm = (row) => {
     setError("");
@@ -165,13 +149,13 @@ export default function FabricInPage() {
           Fabric In
         </h2>
 
-        <button
+        {role=='admin' && <button
           onClick={openAddForm}
           className="flex shrink-0 items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600"
         >
           <Plus size={16} />
           <span className="hidden sm:inline">Add Fabric</span>
-        </button>
+        </button>}
       </div>
 
       <div className="relative mb-4 w-full sm:max-w-xs">

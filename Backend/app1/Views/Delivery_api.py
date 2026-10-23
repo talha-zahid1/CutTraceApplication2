@@ -5,15 +5,15 @@ from django.db import transaction
 from ..serializers import delivered_products_serializer
 from rest_framework.decorators import api_view
 from django.contrib.auth.decorators import login_required
-
+from rest_framework.permissions import IsAuthenticated
 
 class delivered_view(APIView):
 
-    # def get_permissions(self):
-    #     if self.request.method == 'GET':
-    #         return [IsAuthenticated()]
-    #     else:
-    #         return [IsAdmin()]
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsAuthenticated()]
+        else:
+            return [IsAdmin()]
 
     def get(self, req, delivery_id=None):
         with transaction.atomic():

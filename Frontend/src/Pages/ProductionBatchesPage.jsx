@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useContext } from "react";
 import {
   Search,
   Plus,
@@ -12,16 +12,31 @@ import BatchesFormModal from "../Models/BatchesFormModal";
 import DeleteConfirmModal from "../Models/DeleteConfirmModal";
 import BatchesTable from "../Tables/BatchesTable";
 import { api } from "../services/auth";
+import { model_context } from "../Context/ApiContext";
 
 const PAGE_SIZE = 5;
 
+// Apne urls.py se asli URL yahan likhein
+const BATCHES_URL = "product_batches_api/";
+const TOTALS_URL = "batch_entries_api/";
+
+const getErrorMessage = (err, fallback) =>
+  err.response?.data?.message ||
+  err.response?.data?.detail ||
+  (err.response?.data?.error ? JSON.stringify(err.response.data.error) : null) ||
+  err.message ||
+  fallback;
+
 const ProductionBatchesPage = () => {
+  const { role } = useContext(model_context);
   const [OpenAddbutton, setOpenAddbutton] = useState(false);
   const [data, setdata] = useState([]);
   const [search, setsearch] = useState("");
   const [page, setPage] = useState(1);
   const [editingrow, seteditingrow] = useState(null);
-  const [Error, setError] = useState("");
+  // NOTE: pehle yeh `Error` naam se tha, jo global Error ko shadow karta tha
+  // aur `new Error(...)` toot jata tha. Isliye errorMsg rakha hai.
+  const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(true);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingrow, setdeletingrow] = useState(null);
@@ -29,38 +44,46 @@ const ProductionBatchesPage = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
+      setErrorMsg("");
 
-      const resp = await api.get("product_batches_api/");
-      
-      
-      if (resp.data?.status === false) {
+      // Dono API saath call hoti hain. Totals fail ho to bhi batches dikhen.
+      const [batchesResp, totalsResp] = await Promise.all([
+        api.get(BATCHES_URL),
+        api.get(TOTALS_URL).catch((e) => {
+          console.error("Failed to fetch totals:", e.response?.data || e.message);
+          return null;
+        }),
+      ]);
+
+      if (batchesResp.data?.status === false) {
         throw new Error(
-          resp.data?.message || "Failed to load production batches."
+          batchesResp.data?.message || "Failed to load production batches."
         );
       }
 
-      if (!Array.isArray(resp.data?.data)) {
+      if (!Array.isArray(batchesResp.data?.data)) {
         throw new Error("Invalid production batches received from the server.");
       }
 
-      setdata(resp.data.data);
+      const totals = Object.fromEntries(
+        (totalsResp?.data?.data || []).map((t) => [
+          t.batch_id,
+          t.total_quantity_kg,
+        ])
+      );
+
+      setdata(
+        batchesResp.data.data.map((b) => ({
+          ...b,
+          total_quantity_kg: totals[b.batch_id] ?? 0,
+        }))
+      );
     } catch (err) {
       console.error(
         "Failed to fetch production batches:",
         err.response?.data || err.message
       );
-      setError(
-  err.response?.data?.message ||
-    err.response?.data?.detail ||
-    (err.response?.data?.error
-      ? JSON.stringify(err.response.data.error)
-      : null) ||
-    err.message ||
-    "Failed to Load production batches."
-);
-      
-
+      setErrorMsg(getErrorMessage(err, "Failed to load production batches."));
       setdata([]);
     } finally {
       setLoading(false);
@@ -72,42 +95,28 @@ const ProductionBatchesPage = () => {
   }, [fetchData]);
 
   const enableaddbutton = () => {
-    setError("");
+    setErrorMsg("");
     seteditingrow(null);
     setOpenAddbutton(true);
   };
 
   const openEditFrom = (row) => {
-    setError("");
+    setErrorMsg("");
     seteditingrow(row);
     setOpenAddbutton(true);
   };
 
-  const savehandler = (formData) => {
-    if (editingrow) {
-      setdata((prev) =>
-        prev.map((r) =>
-          r.batch_id === editingrow.batch_id ? { ...r, ...formData } : r
-        )
-      );
-    } else {
-      const newRow = {
-        ...formData,
-        batch_id: Math.max(0, ...data.map((r) => r.batch_id)) + 1,
-        created_at: new Date().toISOString().slice(0, 10),
-        updated_at: null,
-      };
-
-      setdata((prev) => [newRow, ...prev]);
-      setPage(1);
-    }
-
+  // Modal ab khud API call karta hai. Save k baad yahan sirf modal band
+  // karna hai aur server se fresh data dobara lana hai.
+  const savehandler = () => {
     setOpenAddbutton(false);
     seteditingrow(null);
+    setPage(1);
+    fetchData();
   };
 
   const openDeleteConfirm = (row) => {
-    setError("");
+    setErrorMsg("");
     setdeletingrow(row);
     setIsDeleteOpen(true);
   };
@@ -116,11 +125,9 @@ const ProductionBatchesPage = () => {
     if (!deletingrow) return;
 
     try {
-      setError("");
+      setErrorMsg("");
 
-      const resp = await api.delete(
-        `product_batches_api/${deletingrow.batch_id}/`
-      );
+      const resp = await api.delete(`${BATCHES_URL}${deletingrow.batch_id}/`);
 
       if (resp.data?.status === false) {
         throw new Error(
@@ -136,16 +143,7 @@ const ProductionBatchesPage = () => {
         "Failed to delete production batch:",
         err.response?.data || err.message
       );
-
-      setError(
-  err.response?.data?.message ||
-    err.response?.data?.detail ||
-    (err.response?.data?.error
-      ? JSON.stringify(err.response.data.error)
-      : null) ||
-    err.message ||
-    "Failed to Delete production batches."
-);
+      setErrorMsg(getErrorMessage(err, "Failed to delete production batch."));
     } finally {
       setIsDeleteOpen(false);
       setdeletingrow(null);
@@ -163,8 +161,10 @@ const ProductionBatchesPage = () => {
         String(row.current_status ?? "").toLowerCase().includes(q) ||
         String(row.batch_id ?? "").includes(q) ||
         row.fabric_in_ids?.some((f) =>
-            String(f.fabric_in_id ?? f).toLowerCase().includes(q 
-            ))
+          String(typeof f === "object" ? f.fabric_in_id : f)
+            .toLowerCase()
+            .includes(q)
+        )
     );
   }, [data, search]);
 
@@ -180,14 +180,24 @@ const ProductionBatchesPage = () => {
           Production Batches
         </h1>
 
-        <button
-          onClick={enableaddbutton}
-          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 whitespace-nowrap shrink-0"
-        >
-          <Plus size={16} />
-          <span className="hidden sm:inline">Add Production Batch</span>
-          <span className="sm:hidden">Add Batch</span>
-        </button>
+        {role == "admin" && (
+          <button
+            onClick={enableaddbutton}
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 whitespace-nowrap shrink-0"
+          >
+            <Plus size={16} />
+            <span className="hidden sm:inline">Add Production Batch</span>
+            <span className="sm:hidden">Add Batch</span>
+          </button>
+        )}
+      </div>
+
+      <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <AlertCircle size={14} className="mt-0.5 shrink-0" />
+        <p>
+          <span className="font-semibold">Important:</span> Only add Fabric In
+          entries with the exact same color and quality to a single batch.
+        </p>
       </div>
 
       <div className="relative mb-4 w-full max-w-xs">
@@ -209,7 +219,7 @@ const ProductionBatchesPage = () => {
       </div>
 
       {/* Error State */}
-      {Error ? (
+      {errorMsg ? (
         <div className="flex min-h-64 flex-col items-center justify-center gap-3 px-4 text-center">
           <AlertCircle size={28} className="text-red-500" />
 
@@ -218,7 +228,7 @@ const ProductionBatchesPage = () => {
           </p>
 
           <p className="max-w-lg break-words text-sm text-slate-500">
-            {Error}
+            {errorMsg}
           </p>
 
           <button
@@ -296,4 +306,3 @@ const ProductionBatchesPage = () => {
 };
 
 export default ProductionBatchesPage;
-

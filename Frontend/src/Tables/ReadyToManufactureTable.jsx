@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Trash2, Pencil, ClipboardList } from "lucide-react";
-
+import { model_context } from "../Context/ApiContext";
 const STATUS_STYLES = {
   pending: "bg-amber-50 text-amber-600",
   cancelled: "bg-red-50 text-red-600",
@@ -31,22 +31,25 @@ function formatDateTime(value) {
 }
 
 function ActionButtons({ row, isPending, onEdit, onDelete }) {
+  const { role, setrole } = useContext(model_context)
   return (
     <div className="flex items-center gap-1 shrink-0">
-      <button
+      {role=='admin'&&<button
         onClick={() => onEdit(row)}
         disabled={!isPending}
         className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
       >
         <Pencil size={15} />
       </button>
-      <button
+      
+      }
+      {role=='admin'&&<button
         onClick={() => onDelete(row)}
         disabled={!isPending}
         className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
       >
         <Trash2 size={15} />
-      </button>
+      </button>}
     </div>
   );
 }
@@ -62,7 +65,7 @@ export default function ReadyToManufactureTable({
     const found = qualities.find((q) => String(q.quality_id) === String(id));
     return found ? found.name : "-";
   };
-
+  
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-slate-400 text-sm">
@@ -107,7 +110,7 @@ export default function ReadyToManufactureTable({
                   <p className="text-xs text-slate-400 mt-0.5 break-words">
                     Master: {row.master_name} &bull; Tailor: {row.tailor_name}{" "}
                     <span className="whitespace-nowrap">
-                      &bull; MId #{row.ready_manufacture_id}
+                      &bull; RMId #{row.ready_manufacture_id}
                     </span>
                   </p>
                 </div>
@@ -164,7 +167,7 @@ export default function ReadyToManufactureTable({
                 <p className="text-xs text-slate-400 mt-0.5 truncate">
                   Master: {row.master_name} &bull; Tailor: {row.tailor_name}{" "}
                   <span className="whitespace-nowrap">
-                    &bull; MId #{row.ready_manufacture_id}
+                    &bull; RMId #{row.ready_manufacture_id}
                   </span>
                 </p>
               </div>

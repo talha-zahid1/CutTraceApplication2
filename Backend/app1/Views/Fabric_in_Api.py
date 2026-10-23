@@ -7,11 +7,11 @@ from ..custom_permission import IsAdmin
 from rest_framework.permissions import IsAuthenticated
 
 class Fabric_in_view(APIView):
-    # def get_permissions(self):
-    #     if self.request.method=='GET':
-    #         return [IsAuthenticated()]
-    #     else:
-    #         return [IsAdmin()]
+    def get_permissions(self):
+        if self.request.method=='GET':
+            return [IsAuthenticated()]
+        else:
+            return [IsAdmin()]
     def get(self, req, batch_id=None):
 
         if not batch_id:

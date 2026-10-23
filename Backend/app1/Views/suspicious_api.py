@@ -7,11 +7,11 @@ from ..custom_permission import IsAdmin
 
 
 class suspicious_view(APIView):
-    # def get_permissions(self):
-    #     if self.request.method=='GET':
-    #         return [IsAuthenticated()]
-    #     else:
-    #         return [IsAdmin()]
+    def get_permissions(self):
+        if self.request.method=='GET':
+            return [IsAuthenticated()]
+        else:
+            return [IsAdmin()]
     def get(self,req,suspicious_id=None):
         if not suspicious_id:
             suspicious=suspicious_products.objects.all()

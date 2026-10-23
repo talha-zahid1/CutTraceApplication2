@@ -3,6 +3,11 @@ import logotransparent from "../assets/logotransparent.png"
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../services/auth";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { setapiaccesstoken } from "../services/auth";
+import { useContext } from 'react';
+import { model_context } from '../Context/ApiContext';
+
+
 
 const emptyform = {
   username: "",
@@ -63,6 +68,11 @@ export default function Signup() {
   const [loading, setloading] = useState(false)
   const navigate = useNavigate()
 
+  const { access_token,setaccess_token } = useContext(model_context);
+
+
+
+
   const handle_change = (e) => {
     const { name, value } = e.target
     setform((prev) => ({
@@ -90,24 +100,19 @@ export default function Signup() {
       setloading(true);
       console.log('form',form)
       const resp = await api.post('register/', form)
-      console.log('response',resp?.data?.data)
+      
       if (resp?.data?.status === false) {
         throw new Error(
           getErrorMessage({ response: { data: resp.data } }, "Couldn't create your account.")
         );
-      }
-
-      if (resp?.data?.status) {
-        const loginResp = await api.post('api/token/', {
-          username: form.email,
-          password: form.password,
-        });
- 
-        setapiaccesstoken(loginResp.data.access);
-        localStorage.setItem("access_token", loginResp.data.access);
-        localStorage.setItem("refresh_token", loginResp.data.refresh);
+      } 
+        setaccess_token(resp?.data?.data.access_token)
+        setapiaccesstoken(resp?.data?.data.access_token);
+        localStorage.setItem("access_token", resp?.data?.data.access_token);
+        localStorage.setItem("refresh_token", resp?.data?.data.refresh_token);
         navigate('/dashboard')
-      }
+    
+    
     } catch (err) {
       console.error("Signup failed:", err.response?.data || err.message);
       seterror(getErrorMessage(err, "Couldn't create your account."));

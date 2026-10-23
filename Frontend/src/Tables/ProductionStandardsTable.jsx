@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Pencil, Trash2, Ruler } from "lucide-react";
+import { model_context } from "../Context/ApiContext";
 
 // Is model me status field nahi hai, is liye koi row locked nahi hoti —
 // Edit aur Delete hamesha enabled rehte hain.
 export default function ProductionStandardsTable({ rows, onEdit, onDelete, qualities }) {
+  const {role,setrole}=useContext(model_context)
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-slate-400 text-sm">
@@ -58,7 +60,7 @@ export default function ProductionStandardsTable({ rows, onEdit, onDelete, quali
               {String(row.updated_at || row.created_at).slice(0, 10)}
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
+            {role=='admin'&&<div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => onEdit(row)}
                 className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50"
@@ -71,7 +73,7 @@ export default function ProductionStandardsTable({ rows, onEdit, onDelete, quali
               >
                 <Trash2 size={15} />
               </button>
-            </div>
+            </div>}
           </div>
         );
       })}

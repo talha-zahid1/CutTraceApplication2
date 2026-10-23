@@ -1,8 +1,33 @@
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
 import logo from "../assets/Logo.png";
-// import { api } from "../services/auth";
+import { api } from "../services/auth";
+
+// Pulls the top summary strip's live values from existing APIs:
+//   - overall_production_satistics_api/ -> total_products_manufactured,
+//                                           total_fabric_received
+//   - product_batches_api/      -> earliest batch's created_at
+//
+// "Product" tile used to show the most recently received fabric's
+// quality — but with multiple products in the system that single
+// latest item didn't mean much at a glance, so it's replaced with a
+// global count (total products manufactured) that reads the same
+// way as "Amount" and "First Item" do.
+function asList(resp) {
+  const data = resp?.data?.data ?? resp?.data;
+  return Array.isArray(data) ? data : [];
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 const Navbar = () => {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -10,6 +35,55 @@ const Navbar = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [summary, setSummary] = useState({
+    totalProductsManufactured: null,
+    totalFabric: null,
+    firstBatchDate: null,
+  });
+  const [summaryLoading, setSummaryLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const [overallRes, batchesRes] = await Promise.allSettled([
+        api.get("overall_production_satistics_api/"),
+        api.get("product_batches_api/"),
+      ]);
+
+      if (cancelled) return;
+
+      // Overall_production_stats_view ->
+      // data.total_products_manufactured, data.total_fabric_received
+      const overall =
+        overallRes.status === "fulfilled"
+          ? overallRes.value?.data?.data ?? overallRes.value?.data
+          : null;
+      const totalProductsManufactured =
+        overall?.total_products_manufactured ?? null;
+      const totalFabric = overall?.total_fabric_received ?? null;
+
+      // production_batches model: batch_id, created_at, ...
+      // Earliest batch's created_at gives "First Batch Date".
+      const batchesList =
+        batchesRes.status === "fulfilled" ? asList(batchesRes.value) : [];
+      const firstBatch = [...batchesList].sort(
+        (a, b) => new Date(a.created_at) - new Date(b.created_at)
+      )[0];
+
+      setSummary({
+        totalProductsManufactured,
+        totalFabric,
+        firstBatchDate: firstBatch?.created_at ?? null,
+      });
+      setSummaryLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -24,6 +98,14 @@ const Navbar = () => {
     setError("");
 
     // TODO: Implement the global search API.
+    //
+    // No dedicated free-text search endpoint exists in the current API
+    // list (fabric_in_api/, product_batches_api/, ready_to_manufacture_api/,
+    // manufacturing_api/, testing_api/, suspicious_products_api/,
+    // ready_to_deliver_api/, delivered_products_api/, production_standards_api/,
+    // trace_history_api/, ...). trace_history_api/ takes an exact ID
+    // (fabric_in id, batch id, or delivered product id), not a name/text
+    // search — so it can't power this box as-is.
     //
     // try {
     //   const response = await api.get("YOUR_GLOBAL_SEARCH_API/", {
@@ -61,12 +143,30 @@ const Navbar = () => {
           className="h-10 w-auto shrink-0 object-contain sm:h-12"
         />
 
-        <div className="hidden flex-1 items-center justify-center gap-6 md:flex lg:gap-10">
+        <div className="hidden flex-1 items-center justify-center gap-6 pr-4 md:flex lg:gap-12 lg:pr-10">
           {[
-            ["Product", "Fabric Type"],
-            ["Amount", "Total Fabric"],
-            ["First Item", "First Batch Date"],
-          ].map(([label, value], index) => (
+            {
+              label: "Products Manufactured",
+              value:
+                summary.totalProductsManufactured != null
+                  ? `${summary.totalProductsManufactured} Products`
+                  : "—",
+              valueClassName: "text-sm font-semibold px-5 text-slate-700",
+            },
+            {
+              label: "Amount",
+              value:
+                summary.totalFabric != null
+                  ? `${summary.totalFabric} kg`
+                  : "—",
+              valueClassName: "text-sm font-semibold text-slate-700",
+            },
+            {
+              label: "First Item",
+              value: formatDate(summary.firstBatchDate),
+              valueClassName: "text-sm font-semibold text-slate-700",
+            },
+          ].map(({ label, value, valueClassName }, index) => (
             <div
               key={label}
               className={`min-w-0 px-2 ${
@@ -78,8 +178,12 @@ const Navbar = () => {
               <p className="text-[11px] font-medium text-slate-400">
                 {label}
               </p>
-              <p className="mt-1 truncate text-sm font-semibold text-slate-700">
-                {value}
+              <p className={`mt-1 truncate ${valueClassName}`}>
+                {summaryLoading ? (
+                  <span className="inline-block h-5 w-16 animate-pulse rounded bg-slate-100" />
+                ) : (
+                  value
+                )}
               </p>
             </div>
           ))}

@@ -19,6 +19,7 @@ from .Views import (
     inspection_values_api,
     fabric_quality_api,
     BatcFabricIn_api,
+    Batch_entries_view,
     get_profile,
     Profile_Update
 )
@@ -34,12 +35,14 @@ urlpatterns = [
     path("fabric_in_api/<int:fabric_in_id>/", Fabric_in_view.as_view()),
     path("product_batches_api/", batch_view.as_view()),
     path("product_batches_api/<int:batch_id>/", batch_view.as_view()),
+    path("batch_entries_api/",Batch_entries_view),
     path("ready_to_manufacture_api/", ready_to_view.as_view()),
     path("ready_to_manufacture_api/<int:ready_manufacture_id>/", ready_to_view.as_view()),
     path("manufacturing_api/", Manufactured_view.as_view()),
     path("manufacturing_api/<int:manufactured_id>/", Manufactured_view.as_view()),
     path("testing_api/", testing_view.as_view()),
     path("suspicious_products_api/", suspicious_view.as_view()),
+    path("suspicious_products_api/<int:suspicious_id>/", suspicious_view.as_view()),
     path("ready_to_deliver_api/", ready_to_deliver_view.as_view()),
     path("delivered_products_api/", delivered_view.as_view()),
     path("delivered_products_api/<int:delivery_id>/", delivered_view.as_view()),

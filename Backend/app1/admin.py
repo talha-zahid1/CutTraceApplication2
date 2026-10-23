@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import fabric_in
+from .models import UserProfile
 
 # Register your models here.
-admin.site.register(fabric_in)
+admin.site.register(UserProfile)

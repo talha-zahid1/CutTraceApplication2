@@ -7,11 +7,11 @@ from rest_framework.permissions import IsAuthenticated
 from ..custom_permission import IsAdmin
 
 class ready_to_deliver_view(APIView):
-    # def get_permissions(self):
-    #     if self.request.method=='GET':
-    #         return [IsAuthenticated()]
-    #     else:
-    #         return [IsAdmin()]
+    def get_permissions(self):
+        if self.request.method=='GET':
+            return [IsAuthenticated()]
+        else:
+            return [IsAdmin()]
     def get(self, req, ready_to_deliver_id=None):
         if ready_to_deliver_id:
             product = ready_to_deliver.objects.filter(

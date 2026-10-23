@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useContext } from "react";
 import {
   Plus,
   Search,
@@ -12,6 +12,7 @@ import DeliveredProductsFormModal from "../Models/DeliveredProductsFormModal";
 import DeleteConfirmModal from "../Models/DeleteConfirmModal";
 import Navbar from "../components/Navbar";
 import { api } from "../services/auth";
+import { model_context } from "../Context/ApiContext";
 
 const PAGE_SIZE = 5;
 
@@ -31,7 +32,7 @@ export default function DeliveredProductsPage() {
   const [data, setData] = useState([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-
+  
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
 
@@ -44,6 +45,8 @@ export default function DeliveredProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+
+  const {role,setrole}=useContext(model_context)
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -208,14 +211,14 @@ export default function DeliveredProductsPage() {
         <h2 className="text-lg sm:text-xl font-semibold text-slate-800 truncate">
           Delivered Products
         </h2>
-        <button
+        {role=='admin'&&<button
           type="button"
           onClick={openAddForm}
           className="flex shrink-0 items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600"
         >
           <Plus size={16} />
           <span className="hidden sm:inline">Mark Delivered</span>
-        </button>
+        </button>}
       </div>
 
       <div className="relative mb-4 w-full sm:max-w-xs">

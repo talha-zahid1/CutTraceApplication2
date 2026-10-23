@@ -98,7 +98,11 @@ export default function Sidebar() {
       setLoggingOut(true);
 
       const refreshToken = localStorage.getItem("refresh_token");
-
+      console.log("Refresh token exists:", !!refreshToken);
+console.log(
+  "Token type:",
+  refreshToken ? JSON.parse(atob(refreshToken.split(".")[1])).token_type : "missing"
+);
       if (!refreshToken) {
         throw new Error("Logout failed.");
       }
@@ -106,7 +110,7 @@ export default function Sidebar() {
       const response = await api.post("/logout/", {
         refresh: refreshToken,
       });
-
+      console.log(response)
       if (response.data?.status === false) {
         throw new Error(
           response.data?.message ||

@@ -6,11 +6,11 @@ from ..serializers import production_standards_serializer
 from rest_framework.permissions import IsAuthenticated
 from ..custom_permission import IsAdmin
 class standard_view(APIView):
-    # def get_permissions(self):
-    #     if self.request.method=='GET':
-    #         return [IsAuthenticated()]
-    #     else:
-    #         return [IsAdmin()]
+    def get_permissions(self):
+        if self.request.method=='GET':
+            return [IsAuthenticated()]
+        else:
+            return [IsAdmin()]
     def get(self,req,standard_id=None):
         if not standard_id:
             standard=production_standards.objects.all()

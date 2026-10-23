@@ -1,12 +1,12 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view,permission_classes
 from ..models import suspicious_products
 from rest_framework.response import Response
 from django.db.models import Avg
-from django.contrib.auth.decorators import login_required
+from rest_framework.permissions import IsAuthenticated
 
-# @login_required
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def inspection_view(req):
     try:
         data=suspicious_products.objects.values('fabric_quality__name').annotate(

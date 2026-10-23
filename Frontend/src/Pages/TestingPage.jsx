@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   PlayCircle,
   Loader2,
@@ -11,10 +10,16 @@ import {
   ShieldCheck,
   ArrowRight,
   PackageCheck,
+  Lock,
+  TrendingUp,
+  Hourglass,
+  Truck,
+  ShieldAlert,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { api } from "../services/auth";
-
+import { Link } from "react-router-dom";
+import { model_context } from "../Context/ApiContext";
 // ============================================================
 // TestingPage
 // Maps to: testing_view -> POST /testing_api/
@@ -22,83 +27,206 @@ import { api } from "../services/auth";
 // actual output against production_standards and either:
 //   - marks it "ready to deliver" (pass) -> returns tested vs actual data
 //   - flags it as suspicious (fail) -> returns just a message
+//
+// RBAC: SRS (NFR-1.2 / NFR-1.4) ke mutabiq testing ek CRUD-type
+// action hai, isliye sirf admin hi test run kar sakta hai. Owner/user
+// ke liye form render nahi hota. Unki jagah quick stats + recent
+// activity + shortcut links dikhayi jati hain, taake page khaali na
+// lage aur wo bhi kuch meaningful dekh sakein — yahan koi nayi API
+// nahi banayi, jo already SRS mein maujood hain unhi ko combine
+// kiya hai:
+//   - overall_production_satistics_api/  -> passed/failed testing counts
+//   - suspicious_batches_satistics_api/   -> pending investigation count
+//   - ready_to_deliver_api/ + suspicious_products_api/ -> recent activity list
+//
+// NOTE: Stat/response field names neeche SRS (FR-12/FR-14) ke
+// mutabiq guess kiye hain. Agar backend ka actual JSON key naam
+// thora alag ho, to bas us tile ki fallback chain mein apna field
+// naam add kar dena — baqi sab waisa hi rahega.
 // ============================================================
 
 const TOLERANCE_PCT = 0.1;
 
-const DUMMY_PASS_RESULT = {
-  outcome: "pass",
-  message: "Testing Successful",
-  data: {
-    tested_product_quantity: 118,
-    tested_wastage_kg: 9.5,
-    actual_product_quantity: 120,
-    actual_wastage_kg: 8.8,
-  },
-};
+function pick(obj, keys, fallback = null) {
+  if (!obj) return fallback;
+  for (const k of keys) {
+    if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+  }
+  return fallback;
+}
 
-const DUMMY_FAIL_RESULT = {
-  outcome: "fail",
-  message: "Product flagged as suspicious",
-};
+function asList(resp) {
+  const data = resp?.data?.data ?? resp?.data;
+  return Array.isArray(data) ? data : [];
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
 
 export default function TestingPage() {
+  const { role } = useContext(model_context);
+  const isAdmin = role === "admin";
+
   const [manufacturedId, setManufacturedId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
+  // View-only (owner/user) dashboard data
+  const [stats, setStats] = useState(null);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAdmin) return;
+
+    let cancelled = false;
+    setOverviewLoading(true);
+
+    (async () => {
+      const [overallRes, suspiciousStatsRes, deliverRes, suspiciousRes] =
+        await Promise.allSettled([
+          api.get("overall_production_satistics_api/"),
+          api.get("suspicious_batches_satistics_api/"),
+          api.get("ready_to_deliver_api/"),
+          api.get("suspicious_products_api/"),
+        ]);
+
+      if (cancelled) return;
+
+      // ---- Quick stats ----
+      const overall =
+        overallRes.status === "fulfilled"
+          ? overallRes.value?.data?.data ?? overallRes.value?.data
+          : null;
+      const suspiciousStats =
+        suspiciousStatsRes.status === "fulfilled"
+          ? suspiciousStatsRes.value?.data?.data ??
+            suspiciousStatsRes.value?.data
+          : null;
+
+      // Overall_production_stats_view -> data.total_passed / data.total_failed
+      const passed = pick(overall, ["total_passed"]);
+      const failed = pick(overall, ["total_failed"]);
+
+      // suspicious_batches_stats_view has no direct "pending" field —
+      // it only returns total_mismatched_products, resolved_products
+      // and rejected_products, so pending = total - resolved - rejected.
+      const totalMismatched = pick(suspiciousStats, ["total_mismatched_products"], 0);
+      const resolved = pick(suspiciousStats, ["resolved_products"], 0);
+      const rejected = pick(suspiciousStats, ["rejected_products"], 0);
+      const pendingInvestigation =
+        suspiciousStats == null
+          ? null
+          : Math.max(totalMismatched - resolved - rejected, 0);
+
+      setStats({ passed, failed, pendingInvestigation });
+
+      // ---- Recent activity (pass + fail, merged & sorted) ----
+      const passedItems =
+        deliverRes.status === "fulfilled" ? asList(deliverRes.value) : [];
+      const failedItems =
+        suspiciousRes.status === "fulfilled" ? asList(suspiciousRes.value) : [];
+
+      // ready_to_deliver model: ready_to_deliver_id, final_product_name,
+      // quantity, fabric_quality (FK), wastage_kg, wastage_percentage,
+      // prepared_at, status, notes. final_product_name is a plain
+      // CharField so it's always present — no fallback needed.
+      //
+      // suspicious_products model: suspicious_id, batch_id (FK),
+      // fabric_quality (FK), manufactured_id (FK), ...percentages...,
+      // reason, detected_at, investigation_status, remarks. There is
+      // NO final_product_name on this model, so the title falls back
+      // to the batch id.
+      //
+      // NOTE: fabric_quality is a ForeignKey to FabricQuality — the
+      // subtitle below assumes the serializer either expands it to
+      // {id, name} or returns the name as a string. If the API still
+      // returns just the raw FK id, swap item.fabric_quality?.name
+      // for item.fabric_quality here.
+      const merged = [
+        ...passedItems.map((item) => ({
+          key: `pass-${pick(item, ["ready_to_deliver_id"], Math.random())}`,
+          outcome: "pass",
+          title: item.final_product_name || `Batch #${pick(item, ["batch_id"], "-")}`,
+          subtitle: item.fabric_quality?.name ?? item.fabric_quality,
+          date: pick(item, ["prepared_at"]),
+        })),
+        ...failedItems.map((item) => ({
+          key: `fail-${pick(item, ["suspicious_id"], Math.random())}`,
+          outcome: "fail",
+          title: `Batch #${pick(item, ["batch_id"], "-")}`,
+          subtitle: item.fabric_quality?.name ?? item.fabric_quality,
+          date: pick(item, ["detected_at"]),
+        })),
+      ]
+        .filter((i) => i.date)
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 6);
+
+      setRecentActivity(merged);
+      setOverviewLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin]);
+
   const runTest = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!manufacturedId.trim() || loading) return;
+    if (!isAdmin) return;
+    if (!manufacturedId.trim() || loading) return;
 
-  setLoading(true);
-  setError("");
-  setResult(null);
+    setLoading(true);
+    setError("");
+    setResult(null);
 
-  try {
-    const resp = await api.post("testing_api/", {
-      manufactured_id: manufacturedId,
-    });
+    try {
+      const resp = await api.post("testing_api/", {
+        manufactured_id: manufacturedId,
+      });
 
-    if (resp?.data?.status !== true) {
-      const backendError =
-        resp?.data?.message ||
-        resp?.data?.detail ||
-        (resp?.data?.error
-          ? JSON.stringify(resp.data.error)
-          : null);
+      if (resp?.data?.status !== true) {
+        const backendError =
+          resp?.data?.message ||
+          resp?.data?.detail ||
+          (resp?.data?.error ? JSON.stringify(resp.data.error) : null);
 
-      throw new Error(backendError || "Testing failed.");
+        throw new Error(backendError || "Testing failed.");
+      }
+
+      const outcome = resp.data.data ? "pass" : "fail";
+
+      setResult({
+        outcome,
+        message: resp.data.message || "Testing completed.",
+        data: resp.data.data,
+      });
+    } catch (err) {
+      console.error(
+        "Failed to test manufactured product:",
+        err.response?.data || err.message
+      );
+
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.detail ||
+          (err.response?.data?.error
+            ? JSON.stringify(err.response.data.error)
+            : null) ||
+          err.message ||
+          "Something went wrong while testing."
+      );
+    } finally {
+      setLoading(false);
     }
-
-    const outcome = resp.data.data ? "pass" : "fail";
-
-    setResult({
-      outcome,
-      message: resp.data.message || "Testing completed.",
-      data: resp.data.data,
-    });
-  } catch (err) {
-    console.error(
-      "Failed to test manufactured product:",
-      err.response?.data || err.message
-    );
-
-    setError(
-      err.response?.data?.message ||
-        err.response?.data?.detail ||
-        (err.response?.data?.error
-          ? JSON.stringify(err.response.data.error)
-          : null) ||
-        err.message ||
-        "Something went wrong while testing."
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="mx-3 my-4 min-h-screen min-w-0 flex-1 overflow-x-hidden rounded-2xl bg-[#EEF1FB] p-4 sm:mx-6 sm:my-6 sm:p-6 lg:mx-10 lg:my-8 lg:p-8">
@@ -120,6 +248,12 @@ export default function TestingPage() {
                 <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-700">
                   Quality Control
                 </span>
+                {!isAdmin && (
+                  <span className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                    <Lock size={11} />
+                    View only
+                  </span>
+                )}
               </div>
 
               <p className="max-w-xl text-sm leading-6 text-slate-500">
@@ -128,93 +262,235 @@ export default function TestingPage() {
               </p>
             </div>
           </div>
+          <Link to='/standards'className="flex w-fit items-center gap-2 rounded-xl border border-white bg-white/80 px-3.5 py-2.5 pointer-cursor" >
 
-          <div className="flex w-fit items-center gap-2 rounded-xl border border-white bg-white/80 px-3.5 py-2.5">
             <ShieldCheck size={17} className="text-blue-600" />
             <span className="text-xs font-medium text-slate-600">
               Production Standards
             </span>
-          </div>
-        </div>
+          </Link>
+           </div>
 
         {/* Main content */}
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-          {/* Test form card */}
-          <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-5 py-5 sm:px-6">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                  <PlayCircle size={18} />
+          {/* Test form card (admin only) / view-only dashboard (owner & user) */}
+          {isAdmin ? (
+            <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-5 py-5 sm:px-6">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <PlayCircle size={18} />
+                  </div>
+                  <h2 className="text-base font-semibold text-slate-800">
+                    Run a quality test
+                  </h2>
                 </div>
-                <h2 className="text-base font-semibold text-slate-800">
-                  Run a quality test
-                </h2>
-              </div>
 
-              <p className="mt-2 text-sm leading-5 text-slate-500">
-                Enter the manufactured product ID to start the inspection.
-              </p>
-            </div>
-
-            <form onSubmit={runTest} className="space-y-5 p-5 sm:p-6">
-              <div>
-                <label
-                  htmlFor="manufacturedId"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Manufactured Product ID
-                </label>
-
-                <input
-                  id="manufacturedId"
-                  type="text"
-                  inputMode="numeric"
-                  required
-                  value={manufacturedId}
-                  onChange={(e) =>
-                    setManufacturedId(e.target.value.replace(/[^0-9]/g, ""))
-                  }
-                  placeholder="e.g. 42"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-800 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 sm:text-sm"
-                />
-
-                <p className="mt-2 text-xs leading-5 text-slate-400">
-                  Enter the ID of a product that has completed manufacturing.
+                <p className="mt-2 text-sm leading-5 text-slate-500">
+                  Enter the manufactured product ID to start the inspection.
                 </p>
               </div>
 
-              {error && (
-                <div
-                  role="alert"
-                  className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 p-3 text-sm text-rose-700"
-                >
-                  <AlertTriangle size={17} className="mt-0.5 shrink-0" />
-                  <p className="break-words">{error}</p>
+              <form onSubmit={runTest} className="space-y-5 p-5 sm:p-6">
+                <div>
+                  <label
+                    htmlFor="manufacturedId"
+                    className="mb-2 block text-sm font-medium text-slate-700"
+                  >
+                    Manufactured Product ID
+                  </label>
+
+                  <input
+                    id="manufacturedId"
+                    type="text"
+                    inputMode="numeric"
+                    required
+                    value={manufacturedId}
+                    onChange={(e) =>
+                      setManufacturedId(e.target.value.replace(/[^0-9]/g, ""))
+                    }
+                    placeholder="e.g. 42"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-800 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 sm:text-sm"
+                  />
+
+                  <p className="mt-2 text-xs leading-5 text-slate-400">
+                    Enter the ID of a product that has completed manufacturing.
+                  </p>
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <PlayCircle size={18} />
+                {error && (
+                  <div
+                    role="alert"
+                    className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 p-3 text-sm text-rose-700"
+                  >
+                    <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+                    <p className="break-words">{error}</p>
+                  </div>
                 )}
-                {loading ? "Testing Product..." : "Run Test"}
-                {!loading && <ArrowRight size={16} className="ml-1" />}
-              </button>
-            </form>
 
-            <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-3.5 sm:px-6">
-              <p className="flex items-center gap-2 text-xs leading-5 text-slate-500">
-                <ShieldCheck size={15} className="shrink-0 text-slate-400" />
-                Results are evaluated against the product's production standard.
-              </p>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <PlayCircle size={18} />
+                  )}
+                  {loading ? "Testing Product..." : "Run Test"}
+                  {!loading && <ArrowRight size={16} className="ml-1" />}
+                </button>
+              </form>
+
+              <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-3.5 sm:px-6">
+                <p className="flex items-center gap-2 text-xs leading-5 text-slate-500">
+                  <ShieldCheck size={15} className="shrink-0 text-slate-400" />
+                  Results are evaluated against the product's production standard.
+                </p>
+              </div>
+            </section>
+          ) : (
+            <div className="space-y-5">
+              {/* Notice */}
+              <section className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-6 text-center shadow-sm sm:p-8">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                  <Lock size={20} />
+                </div>
+                <h2 className="text-base font-semibold text-slate-800">
+                  Testing is admin-only
+                </h2>
+                <p className="max-w-sm text-sm leading-6 text-slate-500">
+                  Only an admin can run a quality test. Here's a quick look
+                  at recent testing activity instead.
+                </p>
+              </section>
+
+              {/* Quick stats */}
+              <section className="grid grid-cols-3 gap-3">
+                <StatTile
+                  icon={CheckCircle2}
+                  tone="emerald"
+                  label="Passed"
+                  value={stats?.passed}
+                  loading={overviewLoading}
+                />
+                <StatTile
+                  icon={AlertTriangle}
+                  tone="rose"
+                  label="Flagged"
+                  value={stats?.failed}
+                  loading={overviewLoading}
+                />
+                <StatTile
+                  icon={Hourglass}
+                  tone="amber"
+                  label="Pending Review"
+                  value={stats?.pendingInvestigation}
+                  loading={overviewLoading}
+                />
+              </section>
+
+              {/* Recent activity */}
+              <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+                <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-4 sm:px-6">
+                  <TrendingUp size={17} className="text-slate-400" />
+                  <h2 className="text-sm font-semibold text-slate-800">
+                    Recent testing activity
+                  </h2>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {overviewLoading && (
+                    <div className="flex items-center justify-center gap-2 px-5 py-8 text-sm text-slate-400">
+                      <Loader2 size={16} className="animate-spin" />
+                      Loading...
+                    </div>
+                  )}
+
+                  {!overviewLoading && recentActivity.length === 0 && (
+                    <p className="px-5 py-6 text-center text-sm text-slate-400 sm:px-6">
+                      No recent activity yet.
+                    </p>
+                  )}
+
+                  {!overviewLoading &&
+                    recentActivity.map((item) => (
+                      <div
+                        key={item.key}
+                        className="flex items-center justify-between gap-3 px-5 py-3.5 sm:px-6"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                              item.outcome === "pass"
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-rose-50 text-rose-600"
+                            }`}
+                          >
+                            {item.outcome === "pass" ? (
+                              <CheckCircle2 size={16} />
+                            ) : (
+                              <AlertTriangle size={16} />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-slate-700">
+                              {item.title}
+                            </p>
+                            {item.subtitle && (
+                              <p className="truncate text-xs text-slate-400">
+                                {item.subtitle}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-xs text-slate-400">
+                          {formatDate(item.date)}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </section>
+
+              {/* Shortcuts */}
+              <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Link
+                  to="/ready-to-deliver"
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50/40"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <Truck size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-700">
+                      Ready to Deliver
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      View all products that passed testing
+                    </p>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/suspicious-products"
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:border-rose-200 hover:bg-rose-50/40"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                    <ShieldAlert size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-700">
+                      Suspicious Products
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      View all flagged products
+                    </p>
+                  </div>
+                </Link>
+              </section>
             </div>
-          </section>
+          )}
 
           {/* How it works card */}
           <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm sm:p-6">
@@ -283,8 +559,8 @@ export default function TestingPage() {
           </section>
         </div>
 
-        {/* Test result */}
-        {result && !loading && (
+        {/* Test result (admin only — only admin can ever produce one) */}
+        {isAdmin && result && !loading && (
           <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
             {/* Result heading */}
             <div
@@ -427,6 +703,32 @@ export default function TestingPage() {
           </section>
         )}
       </main>
+    </div>
+  );
+}
+
+function StatTile({ icon: Icon, tone, label, value, loading }) {
+  const toneClasses = {
+    emerald: "bg-emerald-50 text-emerald-600",
+    rose: "bg-rose-50 text-rose-600",
+    amber: "bg-amber-50 text-amber-600",
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm">
+      <div
+        className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl ${toneClasses[tone]}`}
+      >
+        <Icon size={17} />
+      </div>
+      <p className="text-xl font-bold text-slate-800">
+        {loading ? (
+          <span className="inline-block h-6 w-8 animate-pulse rounded bg-slate-100" />
+        ) : (
+          value ?? "—"
+        )}
+      </p>
+      <p className="mt-0.5 text-xs text-slate-400">{label}</p>
     </div>
   );
 }

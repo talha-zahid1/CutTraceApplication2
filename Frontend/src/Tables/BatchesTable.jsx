@@ -1,4 +1,6 @@
 import { Trash2, Pencil, Layers } from "lucide-react";
+import { useContext } from "react";
+import { model_context } from "../Context/ApiContext";
 
 const STAGE_STYLES = {
   "Fabric In": "bg-blue-50 text-blue-600",
@@ -44,6 +46,8 @@ const Badge = ({ className, children }) => (
 );
 
 const BatchesTable = ({ rows, onedit, onDelete }) => {
+  const { role } = useContext(model_context);
+
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-slate-400 text-sm">
@@ -58,7 +62,11 @@ const BatchesTable = ({ rows, onedit, onDelete }) => {
         const fabricText =
           row.fabric_in_ids?.length > 0
             ? row.fabric_in_ids
-                .map((f) => `Fabric In #${f.fabric_in_id} (${f.quantity_used} kg)`)
+                .map((f) =>
+                  typeof f === "object"
+                    ? `Fabric In #${f.fabric_in_id} (${f.quantity_used} kg)`
+                    : `Fabric In #${f}`
+                )
                 .join(", ")
             : "No fabric entries";
 
@@ -88,6 +96,10 @@ const BatchesTable = ({ rows, onedit, onDelete }) => {
                 <p className="mt-1 text-xs text-slate-400 break-words md:truncate">
                   {fabricText}
                 </p>
+
+                <p className="mt-0.5 text-xs font-medium text-slate-600">
+                  Total: {row.total_quantity_kg ?? 0} kg
+                </p>
               </div>
 
               {/* Status (tablet and up) */}
@@ -108,23 +120,25 @@ const BatchesTable = ({ rows, onedit, onDelete }) => {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50"
-                  onClick={() => onedit(row)}
-                >
-                  <Pencil size={15} />
-                </button>
+              {role == "admin" && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50"
+                    onClick={() => onedit(row)}
+                  >
+                    <Pencil size={15} />
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => onDelete(row)}
-                  className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(row)}
+                    className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Footer for smaller screens: status + dates */}

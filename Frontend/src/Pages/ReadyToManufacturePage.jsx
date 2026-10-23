@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useContext } from "react";
 import {
   Plus,
   Search,
@@ -7,7 +7,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
-
+import {model_context} from '../Context/ApiContext'
 import ReadyToManufactureTable from "../Tables/ReadyToManufactureTable";
 import ReadyToManufactureFormModal from "../Models/ReadyToManufactureFormModal";
 import DeleteConfirmModal from "../Models/DeleteConfirmModal";
@@ -31,6 +31,8 @@ const getErrorMessage = (err, fallback) => {
 };
 
 export default function ReadyToManufacturePage() {
+  
+  const { role, setrole } = useContext(model_context)
   const [data, setData] = useState([]);
   const [batches, setBatches] = useState([]);
   const [qualities, setQualities] = useState([]);
@@ -228,14 +230,14 @@ export default function ReadyToManufacturePage() {
           Ready to Manufacture
         </h2>
 
-        <button
+        {role=='admin'&& <button
           onClick={openAddForm}
           disabled={loading || !!error}
           className="flex shrink-0 items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-50"
         >
           <Plus size={16} />
           <span className="hidden sm:inline">Add Entry</span>
-        </button>
+        </button>}
       </div>
 
       <div className="relative mb-4 w-full sm:max-w-xs">

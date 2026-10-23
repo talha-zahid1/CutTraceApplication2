@@ -6,11 +6,11 @@ from ..serializers import ready_to_manufacture_serializer
 from rest_framework.permissions import IsAuthenticated
 from ..custom_permission import IsAdmin
 class ready_to_view(APIView):
-    # def get_permissions(self):
-    #         if self.request.method=='GET':
-    #             return [IsAuthenticated()]
-    #         else:
-    #             return [IsAdmin()]
+    def get_permissions(self):
+            if self.request.method=='GET':
+                return [IsAuthenticated()]
+            else:
+                return [IsAdmin()]
     def get(self,req,ready_manufacture_id=None):
         if ready_manufacture_id:
             product=ready_to_manufacture.objects.filter(ready_manufacture_id=ready_manufacture_id).first()

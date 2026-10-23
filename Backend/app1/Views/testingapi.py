@@ -53,7 +53,8 @@ class testing_view(APIView):
                         },
                         status=400,
                     )
-
+                print("original_quantity_kg",manufactured_data.original_quantity_kg)
+                
                 tested_product = (
                     manufactured_data.original_quantity_kg
                     / standards.standard_total_weight
@@ -63,7 +64,7 @@ class testing_view(APIView):
                     manufactured_data.original_quantity_kg
                     / standards.standard_total_weight
                 ) * standards.standard_wastage_quantity
-
+                
                 if (
                     manufactured_data.final_product_quantity
                     >= (tested_product - 5)
@@ -77,10 +78,10 @@ class testing_view(APIView):
                     manufactured_data.save()
                     data = {
                         "manufactured_id": manufactured_data.manufactured_id,
-                        "batch_id": manufactured_data.batch_id,
+                        "batch_id": manufactured_data.batch_id_id,
                         "final_product_name": manufactured_data.final_product_name,
                         "quantity": manufactured_data.final_product_quantity,
-                        "fabric_quality": manufactured_data.fabric_quality,
+                        "fabric_quality": manufactured_data.fabric_quality_id,
                         "final_product_percentage": manufactured_data.final_product_percentage,
                         "wastage_kg": manufactured_data.wastage_kg,
                         "wastage_percentage": manufactured_data.wastage_percentage,
@@ -119,12 +120,13 @@ class testing_view(APIView):
                         "actual_final_product_quantity": manufactured_data.final_product_quantity,
                         "tested_final_product_quantity": tested_product,
                         "final_product_percentage": manufactured_data.final_product_percentage,
-                        "mismatched_wastage_percentage": (
-                            abs(
-                                manufactured_data.wastage_kg - tested_Wastage
-                            )
-                            / tested_Wastage
-                        ) * 100,
+                        "mismatched_wastage_percentage": round(
+    (
+        abs(manufactured_data.wastage_kg - tested_Wastage)
+        / tested_Wastage
+    ) * 100,
+    3
+),
                         "mismatched_final_product_percentage": (
                             abs(
                                 manufactured_data.final_product_quantity
@@ -134,6 +136,12 @@ class testing_view(APIView):
                         ) * 100,
                         "reason": "Actual output outside acceptable range of expected standard",
                         "investigation_status": "Pending",
+                        "expected_wastage_kg": tested_Wastage,
+"expected_wastage_percentage": (
+    tested_Wastage / manufactured_data.original_quantity_kg
+) * 100,
+"expected_final_product_quantity": tested_product,
+"remarks": "Product flagged for investigation",
                     }
 
                     serializer = suspicious_products_serializer(data=data)
@@ -155,7 +163,7 @@ class testing_view(APIView):
                         return Response(
                             {
                                 "status": False,
-                                "errors": serializer.error_messages,
+                                "errors": serializer.errors,
                             },
                             status=400,
                         )

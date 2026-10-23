@@ -5,19 +5,18 @@ from rest_framework.response import Response
 from ..serializers import user_serializer,profile_serializer
 from django.contrib.auth.models import User
 from rest_framework.decorators import permission_classes,api_view
-from django.contrib.auth.decorators import login_required
 from ..models import UserProfile
 from django.db import transaction
 
-# @permission_classes([IsAuthenticated])
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_profile(req):
     user=req.user
     if not UserProfile.objects.filter(user=user).exists():
         return Response({
             'status':False,
             'message':'User is not Found'
-        },status=404)
+        },status=401)
     return Response(
         {
             "status": True,
@@ -31,8 +30,9 @@ def get_profile(req):
             }
         }
     )
-                
+
 @api_view(['PATCH'])
+@permission_classes([IsAuthenticated])                
 def Profile_Update(req):
     user=req.user
     profile=UserProfile.objects.filter(user=user).first()
@@ -40,7 +40,7 @@ def Profile_Update(req):
         return Response({
             'status':False,
             'message':'User  not Found'
-        },status=404)
+        },status=401)
     
     serializer=profile_serializer(profile,data=req.data,partial=True,context={'request': req})
     if serializer.is_valid():
@@ -63,6 +63,7 @@ def Profile_Update(req):
     },status=400)
 
 class register_view(APIView):
+    authentication_classes = []
     permission_classes=[AllowAny]
     def get_token(self,user):
         refresh=RefreshToken.for_user(user)
@@ -89,10 +90,10 @@ class register_view(APIView):
                     'data':{
                         "user_id":user.id,
                         "username":user.username,
-                        "email":user.email
-                        },
+                        "email":user.email,
                         "access_token":token["access"],
                         'refresh_token':token["refresh"],
+                        },
                     })
             return Response({
                 'status':False,
@@ -100,6 +101,7 @@ class register_view(APIView):
             },status=400)
         
 class logout_view(APIView):
+    permission_classes=[IsAuthenticated]
     def post(self,req):
         try:
             refresh_token=req.data.get('refresh')
@@ -116,6 +118,7 @@ class logout_view(APIView):
             )
 
         except Exception as e:
+            print("Logout error:", repr(e))
             return Response({
                 'status':False,
                 "error": "Invalid refresh token",

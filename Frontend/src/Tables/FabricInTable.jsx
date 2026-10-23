@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Pencil, Trash2, Layers } from "lucide-react";
+import { model_context } from "../Context/ApiContext";
+
 
 function qualityStyle() {
   return "bg-indigo-50 text-indigo-600";
@@ -24,6 +26,8 @@ function formatDateTime(value) {
 }
 
 export default function FabricInTable({ rows, onEdit, onDelete }) {
+  
+  const { role, setrole } = useContext(model_context)
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-slate-400 text-sm">
@@ -92,7 +96,7 @@ export default function FabricInTable({ rows, onEdit, onDelete }) {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-1 shrink-0">
+            {role=='admin' && <div className="flex items-center gap-1 shrink-0">
               <button
                 type="button"
                 onClick={() => onEdit(row)}
@@ -108,7 +112,7 @@ export default function FabricInTable({ rows, onEdit, onDelete }) {
               >
                 <Trash2 size={15} />
               </button>
-            </div>
+            </div>}
           </div>
 
           {/* Footer for smaller screens: quantity, cost, date */}

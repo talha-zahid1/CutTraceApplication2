@@ -9,3 +9,5 @@ from .statistics_api import *
 from .suspicious_api import *
 from .testingapi import *
 from .auth_api import *
+from .BatcFabricIn_api import *
+from .production_pipeline_api import *

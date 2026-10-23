@@ -1,36 +1,36 @@
 import logotransparent from '../assets/logotransparent.png'
 import { Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { api,setapiaccesstoken } from '../services/auth';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { model_context } from '../Context/ApiContext';
 
 const getErrorMessage = (err, fallback) => {
   const body = err.response?.data;
-
   if (typeof body?.message === "string") return body.message;
   if (typeof body?.detail === "string") return body.detail;
   if (typeof body?.error === "string") return body.error;
-
+  
   if (body && typeof body === "object") {
     const fieldErrors = Object.entries(body)
-      .map(([field, value]) => {
-        const message = Array.isArray(value)
-          ? value
-              .map((item) => (typeof item === "string" ? item : JSON.stringify(item)))
-              .join(", ")
-          : typeof value === "string"
-            ? value
-            : "";
-
-        return message ? `${field}: ${message}` : "";
-      })
-      .filter(Boolean);
-
+    .map(([field, value]) => {
+      const message = Array.isArray(value)
+      ? value
+      .map((item) => (typeof item === "string" ? item : JSON.stringify(item)))
+      .join(", ")
+      : typeof value === "string"
+      ? value
+      : "";
+      
+      return message ? `${field}: ${message}` : "";
+    })
+    .filter(Boolean);
+    
     if (fieldErrors.length) {
       return fieldErrors.join(" | ");
     }
   }
-
+  
   if (err.message === "Network Error" || !err.response) {
     if (err.code === "ECONNABORTED") {
       return "The request timed out. Please try again.";
@@ -39,7 +39,7 @@ const getErrorMessage = (err, fallback) => {
       return "Unable to connect to the server. Please check your connection.";
     }
   }
-
+  
   return err.message || fallback;
 };
 
@@ -48,7 +48,8 @@ export default function Login() {
   const [password, setpassword] = useState("")
   const [username, setusername] = useState("")
   const [loading, setloading] = useState(false)
-
+  
+  const {access_token,setaccess_token}=useContext(model_context)
   const navigate = useNavigate()
 
   const submithandler = async (e) => {
@@ -73,6 +74,7 @@ export default function Login() {
     try {
       
       const resp = await api.post('api/token/', { username, password })
+      setaccess_token(resp.data.access)
       setapiaccesstoken(resp.data.access);
       localStorage.setItem("access_token", resp.data.access);
       localStorage.setItem("refresh_token", resp.data.refresh);

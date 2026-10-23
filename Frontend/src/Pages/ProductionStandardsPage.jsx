@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useContext } from "react";
 import {AlertCircle,RefreshCw, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import ProductionStandardsTable from "../Tables/ProductionStandardsTable";
 import ProductionStandardsFormModal from '../Models/ProductionStandardsFormModal'
 import DeleteConfirmModal from "../Models/DeleteConfirmModal";
 import Navbar from "../components/Navbar";
 import { api } from "../services/auth";
+import { model_context } from "../Context/ApiContext";
 
 const dummyData = [
     {
@@ -52,7 +53,7 @@ export default function ProductionStandardsPage() {
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingRow, setDeletingRow] = useState(null);
-
+  const {role,setrole}=useContext(model_context)
 
   const [qualities, setQualities] = useState([]);
 
@@ -259,13 +260,13 @@ useEffect(() => {
 
       <div className="flex items-center justify-between gap-2 mb-5 mt-6">
         <h2 className="text-lg sm:text-xl font-semibold text-slate-800 truncate">Production Standards</h2>
-        <button
+        {role=='admin'&&<button
           onClick={openAddForm}
           className="flex shrink-0 items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600"
         >
           <Plus size={16} />
           <span className="hidden sm:inline">Add Standard</span>
-        </button>
+        </button>}
       </div>
 
       <div className="relative mb-4 w-full sm:max-w-xs">

@@ -7,11 +7,11 @@ from rest_framework.permissions import IsAuthenticated
 from ..custom_permission import IsAdmin
 
 class Manufactured_view(APIView):
-    # def get_permissions(self):
-    #     if self.request.method=='GET':
-    #         return [IsAuthenticated()]
-    #     else:
-    #         return [IsAdmin()]
+    def get_permissions(self):
+        if self.request.method=='GET':
+            return [IsAuthenticated()]
+        else:
+            return [IsAdmin()]
     def get(self,req,manufactured_id=None):
         if not manufactured_id:
             products=manufactured_products.objects.all()

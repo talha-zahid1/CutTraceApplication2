@@ -1,16 +1,15 @@
-from rest_framework.decorators import api_view
-from django.contrib.auth.decorators import login_required
+from rest_framework.decorators import api_view,permission_classes
 from ..models import BatchFabricIn
 from django.db.models import Sum
 from rest_framework.response import Response
-
-
+from rest_framework.permissions import IsAuthenticated
 
 
 
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def Batch_entries_view(req):
     try:
         entries=BatchFabricIn.objects.values('batch_id').annotate(

@@ -9,11 +9,11 @@ from ..serializers import production_batches_serializer,BatchfabricIn_serializer
 
 
 class batch_view(APIView):
-    # def get_permissions(self):
-    #             if self.request.method=='GET':
-    #                 return [IsAuthenticated()]
-    #             else:
-    #                 return [IsAdmin()]
+    def get_permissions(self):
+                if self.request.method=='GET':
+                    return [IsAuthenticated()]
+                else:
+                    return [IsAdmin()]
                 
     def get(self,req,batch_id=None):
         if not batch_id:

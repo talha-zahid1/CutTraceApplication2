@@ -1,7 +1,7 @@
 
-import React from "react";
+import React, { useContext } from "react";
 import { Trash2, Pencil } from "lucide-react";
-
+import { model_context } from "../Context/ApiContext";
 const STATUS_STYLES = {
   pending: "bg-amber-50 text-amber-600",
   "ready to deliver": "bg-emerald-50 text-emerald-600",
@@ -49,7 +49,7 @@ export default function ManufacturingTable({ rows, qualities, onEdit, onDelete }
     );
     return found ? found.name : "-";
   };
-
+  const {role,setrole}=useContext(model_context)
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-slate-400 text-sm">
@@ -95,7 +95,7 @@ export default function ManufacturingTable({ rows, qualities, onEdit, onDelete }
                 </p>
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
+              {role=='admin'&&<div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => onEdit(row)}
                   disabled={!isPending}
@@ -110,7 +110,7 @@ export default function ManufacturingTable({ rows, qualities, onEdit, onDelete }
                 >
                   <Trash2 size={17} />
                 </button>
-              </div>
+              </div>}
             </div>
 
             <div className="border-t border-slate-100 my-3" />

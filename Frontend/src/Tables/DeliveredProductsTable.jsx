@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Pencil,Trash2, PackageCheck } from "lucide-react";
+import { model_context } from "../Context/ApiContext";
 
 const STATUS_STYLES = {
   delivered: "bg-green-50 text-green-600",
@@ -11,6 +12,8 @@ function statusStyle(status) {
 }
 
 export default function DeliveredProductsTable({ rows, onEdit, onDelete }) {
+  
+  const {role,setrole}=useContext(model_context)
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-slate-400 text-sm">
@@ -68,7 +71,7 @@ export default function DeliveredProductsTable({ rows, onEdit, onDelete }) {
               {String(row.delivered_at).slice(0, 10)}
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
+            {role=='admin'&&<div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => onEdit(row)}
                 disabled={!isEditable}
@@ -85,7 +88,7 @@ export default function DeliveredProductsTable({ rows, onEdit, onDelete }) {
               >
                 <Trash2 size={15} />
               </button>
-            </div>
+            </div>}
           </div>
         );
       })}

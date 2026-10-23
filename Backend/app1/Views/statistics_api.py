@@ -8,11 +8,11 @@ from ..custom_permission import IsAdmin
 
 
 class suspicious_batches_stats_view(APIView):
-    # def get_permissions(self):
-    #     if self.request.method=='GET':
-    #         return [IsAuthenticated()]
-    #     else:
-    #         return [IsAdmin()]
+    def get_permissions(self):
+        if self.request.method=='GET':
+            return [IsAuthenticated()]
+        else:
+            return [IsAdmin()]
     def get(self, req):
         try:
             with transaction.atomic():
@@ -64,11 +64,11 @@ class suspicious_batches_stats_view(APIView):
             return Response({"status": False, "error": str(e)}, status=500)
 
 class delivered_products_stats_view(APIView):
-    # def get_permissions(self):
-    #         if self.request.method=='GET':
-    #             return [IsAuthenticated()]
-    #         else:
-    #             return [IsAdmin()]
+    def get_permissions(self):
+            if self.request.method=='GET':
+                return [IsAuthenticated()]
+            else:
+                return [IsAdmin()]
     def get(self,req):
         try:
             with transaction.atomic():
@@ -118,11 +118,11 @@ class delivered_products_stats_view(APIView):
 
 
 class Overall_production_stats_view(APIView):
-    # def get_permissions(self):
-    #         if self.request.method=='GET':
-    #             return [IsAuthenticated()]
-    #         else:
-    #             return [IsAdmin()]
+    def get_permissions(self):
+            if self.request.method=='GET':
+                return [IsAuthenticated()]
+            else:
+                return [IsAdmin()]
     def get(self,req):
         try:
             with transaction.atomic():

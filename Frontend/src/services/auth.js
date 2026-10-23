@@ -42,6 +42,12 @@ api.interceptors.response.use((response) => { return response }, async (error) =
             error.config.headers.Authorization = `Bearer ${resp.data.access}`
             return api(error.config)
         } catch (refreshError) {
+            setapiaccesstoken(null)
+            localStorage.removeItem("access_token")
+            localStorage.removeItem("refresh_token")
+            if (window.location.pathname !== "/login") {
+                window.location.href = "/login"
+            }
             return Promise.reject(refreshError)
         }
     }

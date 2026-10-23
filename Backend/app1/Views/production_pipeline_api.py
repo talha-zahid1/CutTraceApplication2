@@ -1,11 +1,11 @@
 from ..models import fabric_in ,ready_to_manufacture,manufactured_products,suspicious_products,ready_to_deliver,delivered_products,production_batches
 from django.db.models import Sum
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
-from django.contrib.auth.decorators import login_required
+from rest_framework.permissions import IsAuthenticated
 
-# @login_required
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def fabric_in_view(req):
     try:
         fabric_total_qty=fabric_in.objects.aggregate(

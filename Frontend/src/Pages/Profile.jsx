@@ -281,7 +281,7 @@ export default function Profile() {
 
         {/* Initial load: error state — takes over the whole page, same as the report pages */}
         {!loading && fetchError && (
-          <div className="flex min-h-[70vh] flex-col items-center justify-center gap-3 px-4 text-center">
+          <div className="flex min-h-[70vh] flex-col  items-center justify-center gap-3 px-4 lg:px-100 text-center">
             <AlertCircle size={26} className="text-red-500 sm:size-7" />
             <p className="text-sm font-medium text-red-500 sm:text-base">
               Unable to load profile

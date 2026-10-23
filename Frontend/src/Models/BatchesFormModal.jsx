@@ -1,169 +1,213 @@
-import {Layers,X,Truck,Plus,Trash2} from 'lucide-react'
-import { useEffect, useState } from 'react';
+import { Layers, X, Truck, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { api } from "../services/auth";
 
+const emptyRow = { fabric_in_id: "", quantity_used: "" };
 const emptyForm = {
-  "fabric_in_ids": [""],
-  "current_stage": "",
-  "current_status": "",
+  fabric_in_ids: [{ ...emptyRow }],
+  current_stage: "",
+  current_status: "",
 };
-
-// Status k liye fixed options - backend model mai 'choices' define nahi,
-// is liye consistency yahin frontend se enforce kar rahe hain taake user
-// free-text type na kare aur misspelling na ho.
 const STATUS_OPTIONS = ["Pending", "In Progress", "Completed", "Cancelled"];
 
-const BatchesFormModal = ({isopen,onclose,initialdata,onsave}) => {
-  const [form, setform] = useState(emptyForm)
-  const isedit=Boolean(initialdata)
+const BatchesFormModal = ({ isopen, onclose, initialdata, onsave }) => {
+  const [form, setform] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const isedit = Boolean(initialdata);
 
   useEffect(() => {
-    setform(initialdata?{...emptyForm,...initialdata}:emptyForm)
-  }, [initialdata])
+    setError("");
+    if (initialdata) {
+      setform({
+        current_stage: initialdata.current_stage ?? "",
+        current_status: initialdata.current_status ?? "",
+        fabric_in_ids: initialdata.fabric_in_ids?.length
+          ? initialdata.fabric_in_ids.map((f) =>
+              typeof f === "object"
+                ? { fabric_in_id: f.fabric_in_id, quantity_used: f.quantity_used }
+                : { fabric_in_id: f, quantity_used: "" }
+            )
+          : [{ ...emptyRow }],
+      });
+    } else {
+      setform(emptyForm);
+    }
+  }, [initialdata, isopen]);
 
-  const handlechange=(field,value)=>{
-    setform((prev)=>({...prev,[field]:value}))
-  }
+  const handlechange = (field, value) =>
+    setform((prev) => ({ ...prev, [field]: value }));
 
-  // fabric_in_ids ek array hai (multiple fabric_in entries aik batch mai),
-  // is liye inky liye alag se chota set of handlers - index k through
-  // specific row ko update/remove karte hein.
-  const handleFabricIdChange=(index,value)=>{
-    setform((prev)=>{
-      const updated=[...prev.fabric_in_ids]
-      updated[index]=value
-      return {...prev,fabric_in_ids:updated}
-    })
-  }
+  const handleRowChange = (index, field, value) =>
+    setform((prev) => {
+      const updated = [...prev.fabric_in_ids];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, fabric_in_ids: updated };
+    });
 
-  const addFabricIdField=()=>{
-    setform((prev)=>({...prev,fabric_in_ids:[...prev.fabric_in_ids,""]}))
-  }
-
-  const removeFabricIdField=(index)=>{
-    setform((prev)=>({
+  const addRow = () =>
+    setform((prev) => ({
       ...prev,
-      fabric_in_ids:prev.fabric_in_ids.filter((_,i)=>i!==index)
-    }))
-  }
+      fabric_in_ids: [...prev.fabric_in_ids, { ...emptyRow }],
+    }));
 
-  const submithandler=(e)=>{
+  const removeRow = (index) =>
+    setform((prev) => ({
+      ...prev,
+      fabric_in_ids: prev.fabric_in_ids.filter((_, i) => i !== index),
+    }));
+
+  const submithandler = async (e) => {
     e.preventDefault();
+    setSaving(true);
+    setError("");
 
-    // TODO: API CALL HERE
-    // if (isedit) {
-    //   fetch(`/api/production/batches/${initialdata.batch_id}/`, {
-    //     method: "PUT",
-    //     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    //     body: JSON.stringify(form),
-    //   }).then((res) => res.json()).then((res) => { if (res.status) onsave(form); });
-    // } else {
-    //   fetch("/api/production/batches/", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    //     body: JSON.stringify(form),
-    //   }).then((res) => res.json()).then((res) => { if (res.status) onsave(form); });
-    // }
+    const payload = {
+      ...form,
+      fabric_in_ids: form.fabric_in_ids.map((r) => ({
+        fabric_in_id: Number(r.fabric_in_id),
+        quantity_used: Number(r.quantity_used),
+      })),
+    };
 
-    onsave(form);
-  }
+    try {
+      const resp = isedit
+        ? await api.put(`product_batches_api/${initialdata.batch_id}/`, payload)
+        : await api.post("product_batches_api/", payload);
+
+      if (resp.data?.status === false) {
+        throw new Error(resp.data?.message || "Failed to save batch.");
+      }
+      onsave(); // page ab data dobara fetch karega
+    } catch (err) {
+      console.error("Save failed:", err.response?.data || err.message);
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.detail ||
+          (err.response?.data?.error
+            ? JSON.stringify(err.response.data.error)
+            : null) ||
+          err.message ||
+          "Failed to save batch."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!isopen) return null;
   return (
-    <div className='fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4'>
-      <div className='bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto'>
-        <div className='flex items-center gap-3 px-6 py-5 border-b border-slate-100'>
+    <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
           <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-        <Layers size={18} className="text-blue-500" />
-      </div>
-        <div className='flex-1'>
-          <h3 className="text-slate-800 font-semibold text-base">
-            {isedit ? "Edit Batch Entry":"Add Batches Entry"}
-          </h3>
-        <p  className="text-xs text-slate-400">
-          {isedit ? "Update the details below":"Fill in the production batch details"}
-        </p>
+            <Layers size={18} className="text-blue-500" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-slate-800 font-semibold text-base">
+              {isedit ? "Edit Batch Entry" : "Add Batches Entry"}
+            </h3>
+            <p className="text-xs text-slate-400">
+              {isedit ? "Update the details below" : "Fill in the production batch details"}
+            </p>
+          </div>
+          <button type="button" onClick={onclose}>
+            <X size={18} />
+          </button>
         </div>
-        <button onClick={onclose}>
-          <X size={18} />
-        </button>
-        </div>
-      <form onSubmit={submithandler} className="px-6 py-5 space-y-6">
 
-        <Section icon={Layers} label="Fabric In Entries">
-          <div className='space-y-2.5'>
-            {form.fabric_in_ids.map((id,index)=>(
-              <div key={index} className='flex items-center gap-2'>
-                <div className='flex-1'>
-                  <input type="text"
-                  required
-                  placeholder={`Fabric In ID #${index+1}`}
-                  className="input"
-                  value={id}
-                  onChange={(e)=>handleFabricIdChange(index,e.target.value)}
+        <form onSubmit={submithandler} className="px-6 py-5 space-y-6">
+          <Section icon={Layers} label="Fabric In Entries">
+            <div className="space-y-2.5">
+              {form.fabric_in_ids.map((row, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    placeholder={`Fabric In ID #${index + 1}`}
+                    className="input"
+                    value={row.fabric_in_id}
+                    onChange={(e) => handleRowChange(index, "fabric_in_id", e.target.value)}
                   />
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="any"
+                    placeholder="Qty (kg)"
+                    className="input"
+                    value={row.quantity_used}
+                    onChange={(e) => handleRowChange(index, "quantity_used", e.target.value)}
+                  />
+                  {form.fabric_in_ids.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeRow(index)}
+                      className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 shrink-0"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </div>
-                {form.fabric_in_ids.length>1 && (
-                  <button
-                  type="button"
-                  onClick={()=>removeFabricIdField(index)}
-                  className='p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 shrink-0'
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <button
-          type="button"
-          onClick={addFabricIdField}
-          className='mt-3 flex items-center gap-1.5 text-xs font-medium text-blue-500 hover:text-blue-600'
-          >
-            <Plus size={14} /> Add another Fabric In
-          </button>
-        </Section>
-
-        <Section icon={Truck} label="Batch Details">
-          <div className='grid grid-cols-2 gap-5'>
-          <Field label="Current Stage" >
-            <input type="text"
-            required
-            value={form.current_stage}
-            onChange={(e)=>handlechange("current_stage",e.target.value)}
-            className='input'
-            />
-          </Field>
-          <Field label="Status" >
-            <select
-            required
-            value={form.current_status}
-            onChange={(e)=>handlechange("current_status",e.target.value)}
-            className='input'
-            >
-              <option value="">Select status</option>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>{status}</option>
               ))}
-            </select>
-          </Field>
-          </div>
-        </Section>
-        <div className='flex justify-end gap-2'>
-          {/* type="button" is important here — this button is inside a
-              <form>, so without it, clicking Cancel would ALSO trigger
-              the form's submit (browser default button type is "submit"). */}
-          <button
-          type="button"
-          className='px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50'
-          onClick={onclose}
-          >Cancel</button>
+            </div>
+            <button
+              type="button"
+              onClick={addRow}
+              className="mt-3 flex items-center gap-1.5 text-xs font-medium text-blue-500 hover:text-blue-600"
+            >
+              <Plus size={14} /> Add another Fabric In
+            </button>
+          </Section>
 
-          <button type='submit'  className='flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 shadow-sm shadow-blue-200'>
-            <Truck size={15} />
-            {isedit?"Save Changes":"Add Batch"}
-          </button>
-        </div>
-      </form>
+          <Section icon={Truck} label="Batch Details">
+            <div className="grid grid-cols-2 gap-5">
+              <Field label="Current Stage">
+                <input
+                  type="text"
+                  required
+                  value={form.current_stage}
+                  onChange={(e) => handlechange("current_stage", e.target.value)}
+                  className="input"
+                />
+              </Field>
+              <Field label="Status">
+                <select
+                  required
+                  value={form.current_status}
+                  onChange={(e) => handlechange("current_status", e.target.value)}
+                  className="input"
+                >
+                  <option value="">Select status</option>
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          </Section>
+
+          {error && <p className="text-sm text-red-500 break-words">{error}</p>}
+
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50"
+              onClick={onclose}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 shadow-sm shadow-blue-200 disabled:opacity-60"
+            >
+              <Truck size={15} />
+              {saving ? "Saving..." : isedit ? "Save Changes" : "Add Batch"}
+            </button>
+          </div>
+        </form>
       </div>
 
       <style>
@@ -176,18 +220,17 @@ const BatchesFormModal = ({isopen,onclose,initialdata,onsave}) => {
           color: #334155;
           background: #f8fafc;
         }
-          .input:focus {
+        .input:focus {
           outline: none;
           background: #fff;
           border-color: #60a5fa;
           box-shadow: 0 0 0 3px rgba(96,165,250,0.15);
-        }
-        `}
+        }`}
       </style>
+    </div>
+  );
+};
 
-      </div>
-  )
-}
 function Section({ icon: Icon, label, children }) {
   return (
     <div>
@@ -209,4 +252,4 @@ function Field({ label, children }) {
   );
 }
 
-export default BatchesFormModal
+export default BatchesFormModal;
