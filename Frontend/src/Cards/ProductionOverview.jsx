@@ -67,12 +67,18 @@ const ProductionOverview = () => {
 
   const productionStatus = data?.production_status;
 
+  // Numeric stats (wastage %, efficiency %, pass %) come back from the
+  // backend as raw floats with many decimal places (e.g.
+  // 87.6666666666667), so round them to 3 decimals here before display.
   const formatValue = (value, suffix = "%") => {
     if (loading) return "Loading...";
     if (error) return "Unavailable";
     if (value == null || value === "") return "N/A";
 
-    return `${value}${suffix}`;
+    const n = Number(value);
+    if (Number.isNaN(n)) return "N/A";
+
+    return `${n.toFixed(3)}${suffix}`;
   };
 
   const statusLabel = loading
@@ -183,4 +189,3 @@ const ProductionOverview = () => {
 };
 
 export default ProductionOverview;
-

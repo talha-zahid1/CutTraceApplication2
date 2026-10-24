@@ -16,7 +16,7 @@ import { api } from "../services/auth";
 // actual allowed values differ.
 // ============================================================
 
-const STATUS_OPTIONS = ["Pending", "Investigating", "Resolved", "Confirmed", "Rejected"];
+const STATUS_OPTIONS = ["Pending", "Investigating", "Resolved", "Rejected"];
 
 export default function SuspiciousInvestigationModal({ open, data, onClose, onSave }) {
   const [investigationStatus, setInvestigationStatus] = useState("Pending");
@@ -41,14 +41,14 @@ export default function SuspiciousInvestigationModal({ open, data, onClose, onSa
     if (loading) return;
 
     const payload = {
-      investigation_status: investigationStatus,
+        investigation_status: investigationStatus,
       remarks,
     };
 
     try {
       setLoading(true);
       setError("");
-
+      console.log(payload)
       const res = await api.put(
         `suspicious_products_api/${data.suspicious_id}/`,
         payload

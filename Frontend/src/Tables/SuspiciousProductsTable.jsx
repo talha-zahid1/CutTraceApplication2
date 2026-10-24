@@ -5,8 +5,7 @@ const STATUS_STYLES = {
   pending: "bg-amber-50 text-amber-600",
   investigating: "bg-blue-50 text-blue-600",
   resolved: "bg-emerald-50 text-emerald-600",
-  confirmed: "bg-red-50 text-red-600",
-  rejected: "bg-slate-100 text-slate-600",
+  rejected: "bg-red-50 text-red-600",
 };
 
 function statusStyle(status) {
@@ -53,7 +52,7 @@ export default function SuspiciousProductsTable({ rows, onEdit }) {
       {rows.map((row) => {
         // PUT sirf tab allowed hai jab investigation abhi resolved/confirmed na hui ho
         const status = String(row.investigation_status || "").toLowerCase();
-        const isEditable = status !== "resolved" && status !== "confirmed";
+        const isEditable = status !== "resolved" && status !== "rejected";
 
         return (
           <div

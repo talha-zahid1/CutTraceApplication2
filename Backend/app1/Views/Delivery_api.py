@@ -6,6 +6,7 @@ from ..serializers import delivered_products_serializer
 from rest_framework.decorators import api_view
 from django.contrib.auth.decorators import login_required
 from rest_framework.permissions import IsAuthenticated
+from ..custom_permission import IsAdmin
 
 class delivered_view(APIView):
 
@@ -92,8 +93,8 @@ class delivered_view(APIView):
 
                 if serializer.is_valid():
                     serializer.save()
-                    product.save()
                     product.status = 'delivered'
+                    product.save()
 
                     return Response({
                         'status': True,

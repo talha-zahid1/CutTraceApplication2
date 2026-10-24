@@ -20,12 +20,17 @@ class suspicious_view(APIView):
                     'status':True,
                     'message':'No suspicious Product Not Found'
                 })
+                
+            
+            
+            
             serializer=suspicious_products_serializer(suspicious,many=True)
             return Response({
                 'status':True,
                 'data':serializer.data
             })
         else:
+            
             suspicious=suspicious_products.objects.filter(suspicious_id=suspicious_id).first()
             if not suspicious:
                 return Response({
@@ -47,8 +52,9 @@ class suspicious_view(APIView):
                 'error':f' suspicious Product {suspicious_id} Not Found'
             })
         serializer=suspicious_products_serializer(suspicious,data=req.data,partial=True)
+        
         if serializer.is_valid():
-            if suspicious.investigation_status.lower()!='resolved' and suspicious.investigation_status.lower()!='confirmed':
+            if suspicious.investigation_status.lower()!='rejected' and suspicious.investigation_status.lower()!='resolved' and suspicious.investigation_status.lower()!='confirmed':
                 serializer.save()
                 return Response({
                     'status':True,

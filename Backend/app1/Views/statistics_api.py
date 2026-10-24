@@ -26,11 +26,12 @@ class suspicious_batches_stats_view(APIView):
                     actual_wastage_percentage=Sum("actual_wastage_percentage")
                 )['actual_wastage_percentage'] or 0
                 resolved = suspicious_products.objects.filter(
-                    investigation_status="resolved"
+                    investigation_status="Resolved"
                 ).aggregate(resolved=Count("suspicious_id"))
                 rejected = suspicious_products.objects.filter(
-                    investigation_status="rejected"
+                    investigation_status="Rejected"
                 ).aggregate(rejected=Count("suspicious_id"))
+                print(rejected)
                 products_by_quality = suspicious_products.objects.values(
                     "fabric_quality__name"
                 ).annotate(total=Count("batch_id", distinct=True))

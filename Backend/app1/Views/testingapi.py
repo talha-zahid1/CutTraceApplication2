@@ -53,7 +53,7 @@ class testing_view(APIView):
                         },
                         status=400,
                     )
-                print("original_quantity_kg",manufactured_data.original_quantity_kg)
+                
                 
                 tested_product = (
                     manufactured_data.original_quantity_kg
